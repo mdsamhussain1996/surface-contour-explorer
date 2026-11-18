@@ -1,0 +1,3307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Surface & Contour Explorer</title>
+  
+  <!-- CDN Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #f6f7fb;
+      --card-bg: #ffffff;
+      --text-main: #212529;
+      --text-muted: #6c757d;
+      --primary: #6741d9;
+      --primary-hover: #5c38c6;
+      --primary-active: #4c2ca8;
+      --primary-light: #f3f0ff;
+      --level-red: #e03131;
+      --level-red-light: #fff5f5;
+      --level-red-border: #ffc9c9;
+      --build-red: #ff6b6b;
+      --build-blue: #4dabf7;
+      --build-gold: #ffd43b;
+      --build-dark-bg: #171e2e;
+      --build-grid-color: #2c3755;
+      --border-color: #e9ecef;
+      --border-focus: #b197fc;
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-math: "Cambria Math", "KaTeX_Math", Georgia, "Times New Roman", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      padding: 16px 20px 60px;
+      min-height: 100vh;
+      transition: font-size 0.2s ease;
+    }
+
+    /* Presentation Mode adjustments */
+    body.presentation-mode {
+      font-size: 18px;
+    }
+    body.presentation-mode .container {
+      max-width: 1650px;
+    }
+    body.presentation-mode .plot-container {
+      height: 600px !important;
+    }
+    body.presentation-mode .build-plot-container {
+      height: 82vh !important;
+    }
+    body.presentation-mode input,
+    body.presentation-mode select,
+    body.presentation-mode button {
+      font-size: 1.05rem;
+      padding: 10px 14px;
+    }
+
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .title-group h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      letter-spacing: -0.5px;
+    }
+
+    .title-group p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* Mode Navigation Tabs */
+    .mode-tabs-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #e9ecef;
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: #ffffff;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-sm);
+    }
+    .tab-btn:hover {
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(103, 65, 217, 0.3);
+    }
+
+    /* Badges & Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      user-select: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(103, 65, 217, 0.2);
+    }
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+    .btn-primary:active {
+      background-color: var(--primary-active);
+      transform: translateY(1px);
+    }
+
+    .btn-secondary {
+      background-color: #ffffff;
+      color: var(--text-main);
+      border-color: #ced4da;
+    }
+    .btn-secondary:hover {
+      background-color: #f8f9fa;
+      border-color: #adb5bd;
+    }
+    .btn-secondary.active {
+      background-color: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-animate {
+      background-color: #ffffff;
+      color: var(--level-red);
+      border-color: var(--level-red-border);
+      font-weight: 600;
+      padding: 6px 14px;
+    }
+    .btn-animate:hover {
+      background-color: var(--level-red-light);
+      border-color: var(--level-red);
+    }
+    .btn-animate.animating {
+      background-color: var(--level-red);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(224, 49, 49, 0.4);
+    }
+
+    .btn-build-anim {
+      background-color: #ffffff;
+      color: #d97706;
+      border-color: #fde68a;
+      font-weight: 600;
+      padding: 6px 14px;
+    }
+    .btn-build-anim:hover {
+      background-color: #fef3c7;
+      border-color: #d97706;
+    }
+    .btn-build-anim.animating {
+      background-color: #d97706;
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(217, 119, 6, 0.4);
+    }
+
+    .btn-icon {
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: var(--radius-sm);
+      color: #495057;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .btn-icon:hover {
+      background: #e9ecef;
+      color: #212529;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      padding: 20px 22px;
+      margin-bottom: 20px;
+    }
+
+    /* Control Panel */
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .primary-input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .math-prefix {
+      font-family: var(--font-math);
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #2b2b36;
+      white-space: nowrap;
+    }
+
+    .input-func-wrap {
+      flex: 1;
+      min-width: 250px;
+      position: relative;
+    }
+
+    .input-func {
+      width: 100%;
+      font-family: var(--font-math);
+      font-size: 1.35rem;
+      padding: 9px 16px;
+      border: 2px solid #ced4da;
+      border-radius: var(--radius-sm);
+      color: #1a1a2e;
+      background-color: #ffffff;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .input-func:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(103, 65, 217, 0.15);
+    }
+
+    .examples-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .examples-wrap label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .select-dropdown, .input-number {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: var(--radius-sm);
+      background-color: #ffffff;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .select-dropdown:focus, .input-number:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(103, 65, 217, 0.12);
+    }
+
+    /* Error Banner */
+    .error-banner {
+      display: none;
+      background-color: var(--level-red-light);
+      border: 1px solid var(--level-red-border);
+      color: var(--level-red);
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-weight: 500;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+
+    .cdn-error {
+      background-color: #fff3bf;
+      border: 1px solid #ffe066;
+      color: #92400e;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-weight: 600;
+      display: none;
+    }
+
+    /* Domain Inputs */
+    .range-inputs-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .range-inputs-group .label-group {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+    .range-pair {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #f8f9fa;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #e9ecef;
+    }
+    .range-pair span {
+      font-family: var(--font-math);
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .range-pair input {
+      width: 62px;
+      padding: 4px 6px;
+      text-align: center;
+    }
+
+    /* Secondary Controls Row (Explorer) */
+    .secondary-controls {
+      display: flex;
+      align-items: center;
+      gap: 18px 20px;
+      flex-wrap: wrap;
+      border-top: 1px solid #f1f3f5;
+      padding-top: 14px;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .control-item label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* Slider Group */
+    .slider-section {
+      background: #fafbfc;
+      border: 1px solid #edf0f2;
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slider-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .slider-label-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .level-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--level-red-light);
+      border: 1px solid var(--level-red-border);
+      color: var(--level-red);
+      font-size: 1.15rem;
+      font-weight: 700;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-family: var(--font-math);
+    }
+    .level-badge .val {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .slider-controls-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .btn-step {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid #ced4da;
+      background: #ffffff;
+      color: #343a40;
+      font-size: 1.1rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.1s;
+    }
+    .btn-step:hover {
+      background: #f1f3f5;
+    }
+
+    .slider-input {
+      flex: 1;
+      height: 8px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #dee2e6;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+    .slider-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--level-red);
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(224, 49, 49, 0.4);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .slider-input::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+    }
+    .slider-input::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--level-red);
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(224, 49, 49, 0.4);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+
+    .slider-input-gold::-webkit-slider-thumb {
+      background: #f59f00 !important;
+      box-shadow: 0 2px 6px rgba(245, 159, 0, 0.4) !important;
+    }
+    .slider-input-gold::-moz-range-thumb {
+      background: #f59f00 !important;
+      box-shadow: 0 2px 6px rgba(245, 159, 0, 0.4) !important;
+    }
+
+    .slider-limits {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      padding: 0 44px;
+    }
+
+    /* Syntax Help Line */
+    .syntax-help {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .syntax-label {
+      font-weight: 600;
+      color: #495057;
+    }
+    .syntax-note {
+      color: #868e96;
+      font-style: italic;
+    }
+    .syntax-tag {
+      font-family: var(--font-math);
+      background: #f1f3f5;
+      color: #495057;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid #e9ecef;
+      transition: background 0.1s ease;
+    }
+    .syntax-tag:hover {
+      background: #e9ecef;
+      color: var(--primary);
+    }
+
+    /* Explorer Plots Layout */
+    .plots-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+
+    .plot-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .plot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px 10px;
+      border-bottom: 1px solid #f1f3f5;
+      background: #ffffff;
+    }
+
+    .plot-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #212529;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .plot-title .math-var {
+      font-family: var(--font-math);
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .plot-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .plot-container {
+      width: 100%;
+      height: 460px;
+      position: relative;
+    }
+
+    /* Full Stack View (View 3) */
+    .full-stack-card {
+      display: none;
+      margin-bottom: 22px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    /* Explorer Info Box */
+    .info-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      padding: 18px 24px;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1.6fr;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .info-label {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .info-value {
+      font-size: 1.05rem;
+      color: #212529;
+      font-weight: 600;
+    }
+    .info-value.formula {
+      font-family: var(--font-math);
+      font-size: 1.15rem;
+    }
+    .info-value .highlight-c {
+      color: var(--level-red);
+      font-weight: 700;
+    }
+
+    .tip-box {
+      background: #f8f9fa;
+      border-left: 4px solid var(--primary);
+      padding: 10px 14px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: 0.9rem;
+      color: #495057;
+      line-height: 1.4;
+    }
+
+    /* ========================================================
+       BUILD STEP BY STEP MODE LAYOUT & STYLES
+       ======================================================== */
+    .build-mode-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .build-layout {
+      display: flex;
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    /* Left Sidebar */
+    .build-sidebar {
+      width: 350px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .build-header-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .build-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      line-height: 1.35;
+    }
+
+    .gold-math {
+      font-family: var(--font-math);
+      color: #d97706; /* readable gold on white */
+      font-weight: bold;
+      word-break: break-word;
+    }
+
+    /* Step Cards Stack */
+    .step-cards-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .step-card-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: #ffffff;
+      border: 2px solid #e9ecef;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.18s ease;
+      box-shadow: var(--shadow-sm);
+    }
+    .step-card-btn:hover {
+      border-color: #ced4da;
+      background: #f8f9fa;
+    }
+    .step-card-btn.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      box-shadow: 0 4px 12px rgba(103, 65, 217, 0.15);
+    }
+
+    .step-num-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e9ecef;
+      color: #495057;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .step-card-btn.active .step-num-badge {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .step-card-texts {
+      display: flex;
+      flex-direction: column;
+    }
+    .step-card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #212529;
+    }
+    .step-card-btn.active .step-card-title {
+      color: var(--primary);
+    }
+    .step-card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Explanation Card */
+    .explanation-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-left: 5px solid var(--primary);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+      font-size: 0.92rem;
+      line-height: 1.45;
+      color: #212529;
+    }
+    .explanation-card .math-line {
+      font-family: var(--font-math);
+      font-size: 1.05rem;
+      color: #1a1a2e;
+      background: #f8f9fa;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      border: 1px solid #e9ecef;
+      display: block;
+      word-break: break-all;
+    }
+
+    /* Step Specific Controls Area */
+    .step-controls-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Step Navigation Row */
+    .step-nav-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .build-hint {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    /* Build Main 3D Plot Area */
+    .build-plot-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--build-dark-bg);
+      border: 1px solid #232c42;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      position: relative;
+    }
+
+    .build-plot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 18px;
+      background: #131926;
+      border-bottom: 1px solid #232c42;
+      color: #ffffff;
+      font-size: 0.92rem;
+    }
+
+    .legend-indicators {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 0.82rem;
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    .build-plot-container {
+      width: 100%;
+      height: 75vh;
+      min-height: 520px;
+    }
+
+    /* Step 4 Summary Box */
+    .summary-box {
+      background: #f1f3f5;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.84rem;
+      color: #343a40;
+      line-height: 1.4;
+      border-left: 3px solid #868e96;
+    }
+
+    .clip-note {
+      font-size: 0.78rem;
+      color: #d97706;
+      background: #fffbeb;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #fde68a;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #212529;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .build-layout {
+        flex-direction: column;
+      }
+      .build-sidebar {
+        width: 100%;
+      }
+      .build-plot-container {
+        height: 60vh;
+        min-height: 420px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 12px 12px 40px;
+      }
+      .plots-grid {
+        grid-template-columns: 1fr;
+      }
+      .plot-container {
+        height: 420px;
+      }
+      .secondary-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .primary-input-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .slider-top-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .slider-controls-row {
+        gap: 8px;
+      }
+      .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .info-card {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Offline / CDN Warning -->
+    <div id="cdn-error-banner" class="cdn-error">
+      Plotting libraries did not load. Check your internet connection.
+    </div>
+
+    <!-- Header -->
+    <header>
+      <div class="title-group">
+        <h1>Surface & Contour Explorer</h1>
+        <p>Type any function f(x, y) and see its surface and level curves</p>
+      </div>
+      <div class="header-actions">
+        <button id="btn-share" class="btn btn-secondary" title="Share current function and ranges via URL link">
+          🔗 Share
+        </button>
+        <button id="btn-presentation" class="btn btn-secondary" title="Toggle large projection view for classroom presentation">
+          🖥️ Presentation Mode
+        </button>
+      </div>
+    </header>
+
+    <!-- Top Mode Switcher Tabs -->
+    <nav class="mode-tabs-bar" aria-label="Mode Tabs">
+      <button id="tab-explorer-btn" class="tab-btn active">
+        <span>📊</span> Explorer
+      </button>
+      <button id="tab-build-btn" class="tab-btn">
+        <span>🏗️</span> Build step by step
+      </button>
+    </nav>
+
+    <!-- Shared Top Control Panel -->
+    <div class="card control-panel">
+      <!-- Row 1: Function Input, Examples Dropdown, Plot Button -->
+      <div class="primary-input-row">
+        <span class="math-prefix">z = f(x, y) =</span>
+        <div class="input-func-wrap">
+          <input type="text" id="func-input" class="input-func" value="x^2 + y^2" placeholder="e.g. x^2 + y^2" spellcheck="false" autocomplete="off">
+        </div>
+        <div class="examples-wrap">
+          <label for="examples-select">Examples:</label>
+          <select id="examples-select" class="select-dropdown">
+            <option value="">— choose —</option>
+            <option value="bowl">Bowl (circles) [x^2 + y^2]</option>
+            <option value="elliptic-bowl">Elliptic bowl (ellipses) [x^2 + 4*y^2]</option>
+            <option value="saddle">Saddle (hyperbolas) [x^2 - y^2]</option>
+            <option value="saddle-xy">Saddle z = xy [x*y]</option>
+            <option value="plane">Plane (straight lines) [2*x + y]</option>
+            <option value="cone">Cone [sqrt(x^2 + y^2)]</option>
+            <option value="parabolic">Parabolic contours [y - x^2]</option>
+            <option value="gaussian">Gaussian hill [exp(-(x^2 + y^2))]</option>
+            <option value="two-hills">Two hills [exp(-((x-1)^2+y^2)) + exp(-((x+1)^2+y^2))]</option>
+            <option value="egg-crate">Egg crate [sin(x)*cos(y)]</option>
+            <option value="ripples">Ripples [sin(sqrt(x^2 + y^2))]</option>
+            <option value="peaks-pits">Peaks & pits [(x^2 + 3*y^2)*exp(-x^2 - y^2)]</option>
+            <option value="diamond">Diamond [abs(x) + abs(y)]</option>
+            <option value="monkey-saddle">Monkey saddle [x^3 - 3*x*y^2]</option>
+          </select>
+        </div>
+        <button id="btn-plot" class="btn btn-primary" title="Evaluate and render the function (Enter)">
+          Plot
+        </button>
+      </div>
+
+      <!-- Error message container -->
+      <div id="error-banner" class="error-banner"></div>
+
+      <!-- Syntax Help Line & Domain Controls -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div class="syntax-help">
+          <span class="syntax-label">Input syntax:</span>
+          <span class="syntax-tag" data-insert="x^2">x^2</span>
+          <span class="syntax-tag" data-insert="3*x*y">3*x*y</span>
+          <span class="syntax-note">(implicit multiplication like <span class="syntax-tag" data-insert="3xy" style="display:inline-block;">3xy</span> also works)</span>
+          <span class="syntax-tag" data-insert="sqrt()">sqrt()</span>
+          <span class="syntax-tag" data-insert="exp()">exp()</span>
+          <span class="syntax-tag" data-insert="log()">log()</span>
+          <span class="syntax-tag" data-insert="sin()">sin()</span>
+          <span class="syntax-tag" data-insert="cos()">cos()</span>
+          <span class="syntax-tag" data-insert="tan()">tan()</span>
+          <span class="syntax-tag" data-insert="abs()">abs()</span>
+          <span class="syntax-tag" data-insert="pi">pi</span>
+          <span class="syntax-tag" data-insert="e">e</span>
+        </div>
+
+        <div class="range-inputs-group">
+          <span class="label-group">Domain:</span>
+          <div class="range-pair">
+            <span>x: [</span>
+            <input type="number" id="x-min" class="input-number" value="-2" step="0.5">
+            <span>,</span>
+            <input type="number" id="x-max" class="input-number" value="2" step="0.5">
+            <span>]</span>
+          </div>
+          <div class="range-pair">
+            <span>y: [</span>
+            <input type="number" id="y-min" class="input-number" value="-2" step="0.5">
+            <span>,</span>
+            <input type="number" id="y-max" class="input-number" value="2" step="0.5">
+            <span>]</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         VIEW 1: EXPLORER TAB CONTENT
+         ======================================================== -->
+    <div id="tab-explorer-content">
+      <!-- Explorer Specific Controls Card -->
+      <div class="card" style="padding: 16px 20px; margin-bottom: 20px;">
+        <div class="secondary-controls" style="border-top: none; padding-top: 0; justify-content: space-between;">
+          <div style="display: flex; gap: 18px; align-items: center; flex-wrap: wrap;">
+            <div class="control-item">
+              <label for="num-contours">Contours:</label>
+              <input type="number" id="num-contours" class="input-number" value="12" min="3" max="40" style="width: 60px;">
+            </div>
+
+            <div class="control-item">
+              <label for="contour-style">Style:</label>
+              <select id="contour-style" class="select-dropdown">
+                <option value="fill">Filled contours</option>
+                <option value="lines">Lines only</option>
+              </select>
+            </div>
+
+            <div class="control-item">
+              <label for="color-scheme">Colour:</label>
+              <select id="color-scheme" class="select-dropdown">
+                <option value="Viridis">Viridis</option>
+                <option value="Plasma">Plasma</option>
+                <option value="RdBu">RdBu</option>
+                <option value="Earth">Earth</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="show-plane-toggle" checked style="accent-color: var(--level-red);">
+              Show cutting plane <span style="font-family: var(--font-math); color: var(--level-red); font-weight: bold;">z = c</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Level c Slider & Animation Controls -->
+        <div class="slider-section" style="margin-top: 14px;">
+          <div class="slider-top-row">
+            <div class="slider-label-wrap">
+              <label for="level-slider" style="font-weight: 600;">Level <span style="font-family: var(--font-math); font-style: italic;">c</span>:</label>
+              <div class="level-badge">
+                <span>c = </span>
+                <span id="level-val-display" class="val">0.000</span>
+              </div>
+            </div>
+            <div>
+              <button id="btn-animate" class="btn btn-animate" title="Smoothly sweep c across the range">
+                ▶ Animate c
+              </button>
+            </div>
+          </div>
+          <div class="slider-controls-row">
+            <button id="btn-step-down" class="btn-step" title="Decrease c by one step">−</button>
+            <input type="range" id="level-slider" class="slider-input" min="0" max="1" step="0.005" value="0.5">
+            <button id="btn-step-up" class="btn-step" title="Increase c by one step">+</button>
+          </div>
+          <div class="slider-limits">
+            <span id="slider-min-label">min: 0.000</span>
+            <span id="slider-max-label">max: 1.000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plots Side by Side -->
+      <div class="plots-grid">
+        <!-- Left Plot: 3D Surface -->
+        <div class="plot-card">
+          <div class="plot-header">
+            <div class="plot-title">
+              Surface <span class="math-var">z = f(x, y)</span>
+            </div>
+            <div class="plot-actions">
+              <button id="btn-export-surface" class="btn-icon" title="Download 3D Surface as PNG">
+                📷 Export PNG
+              </button>
+            </div>
+          </div>
+          <div id="plot-surface" class="plot-container"></div>
+        </div>
+
+        <!-- Right Plot: 2D Contour -->
+        <div class="plot-card">
+          <div class="plot-header">
+            <div class="plot-title">
+              Contour plot <span class="math-var">f(x, y) = c</span>
+            </div>
+            <div class="plot-actions">
+              <button id="btn-export-contour" class="btn-icon" title="Download Contour Plot as PNG">
+                📷 Export PNG
+              </button>
+            </div>
+          </div>
+          <div id="plot-contour" class="plot-container"></div>
+        </div>
+      </div>
+
+      <!-- Optional View 3: 3D Surface with All Contour Lines -->
+      <div style="margin-bottom: 22px;">
+        <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; user-select: none;">
+          <input type="checkbox" id="show-full-stack" style="accent-color: var(--primary); transform: scale(1.15);">
+          Show 3D surface with all contour lines
+        </label>
+      </div>
+
+      <div id="full-stack-card" class="plot-card full-stack-card">
+        <div class="plot-header">
+          <div class="plot-title">
+            3D surface with all contour lines
+          </div>
+          <div class="plot-actions">
+            <button id="btn-export-full-stack" class="btn-icon" title="Download Full Stack Plot as PNG">
+              📷 Export PNG
+            </button>
+          </div>
+        </div>
+        <div id="plot-full-stack" class="plot-container"></div>
+      </div>
+
+      <!-- Live Info Box -->
+      <div class="info-card">
+        <div class="info-item">
+          <span class="info-label">Active Level Curve</span>
+          <span class="info-value formula">
+            Level curve: <span id="info-curve-func">x^2 + y^2</span> = <span id="info-curve-c" class="highlight-c">0.000</span>
+          </span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Extrema on Region</span>
+          <span class="info-value" id="info-extrema">
+            Min of f on this region ≈ 0.000, Max ≈ 0.000
+          </span>
+        </div>
+
+        <div class="tip-box">
+          💡 Closely spaced contours mean a steep surface; widely spaced contours mean a gentle one.
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         VIEW 2: BUILD STEP BY STEP TAB CONTENT
+         ======================================================== -->
+    <div id="tab-build-content" class="build-mode-container" style="display: none;">
+      <div class="build-layout">
+        <!-- Left Sidebar (350px) -->
+        <aside class="build-sidebar">
+          <!-- Title Box -->
+          <div class="build-header-card">
+            <div class="build-title">
+              Building the surface <span id="build-title-func" class="gold-math">z = x^2 + y^2</span> step by step
+            </div>
+            <div id="build-clip-note" class="clip-note" style="display: none;">
+              ⚠️ Extreme values clipped for clear display
+            </div>
+          </div>
+
+          <!-- Step Buttons Stack -->
+          <div class="step-cards-stack">
+            <button class="step-card-btn active" data-step="1">
+              <span class="step-num-badge">1</span>
+              <div class="step-card-texts">
+                <span class="step-card-title">Put y = 0</span>
+                <span class="step-card-subtitle">Slice with the xz-plane</span>
+              </div>
+            </button>
+
+            <button class="step-card-btn" data-step="2">
+              <span class="step-num-badge">2</span>
+              <div class="step-card-texts">
+                <span class="step-card-title">Put x = 0</span>
+                <span class="step-card-subtitle">Slice with the yz-plane</span>
+              </div>
+            </button>
+
+            <button class="step-card-btn" data-step="3">
+              <span class="step-num-badge">3</span>
+              <div class="step-card-texts">
+                <span class="step-card-title">Build the surface</span>
+                <span class="step-card-subtitle" id="step3-subtitle">Rotate or sweep the slice</span>
+              </div>
+            </button>
+
+            <button class="step-card-btn" data-step="4">
+              <span class="step-num-badge">4</span>
+              <div class="step-card-texts">
+                <span class="step-card-title">The full surface</span>
+                <span class="step-card-subtitle">Surface + level curves</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Live Explanation Box -->
+          <div class="explanation-card">
+            <div id="build-explanation-text">Loading explanation...</div>
+          </div>
+
+          <!-- Step Specific Controls Card -->
+          <div id="build-step-controls" class="step-controls-card">
+            <!-- Dynamic Controls inserted here based on step -->
+          </div>
+
+          <!-- Step Navigation Buttons -->
+          <div class="step-nav-row">
+            <button id="btn-step-prev" class="btn btn-secondary" style="flex: 1;" disabled>
+              ◀ Previous
+            </button>
+            <button id="btn-step-next" class="btn btn-primary" style="flex: 1;">
+              Next ▶
+            </button>
+          </div>
+
+          <div class="build-hint">
+            💡 Drag the plot to turn it, scroll to zoom.<br>(Use Left / Right arrow keys to step)
+          </div>
+        </aside>
+
+        <!-- Main Area: Large Dark Theme 3D Plot -->
+        <main class="build-plot-area">
+          <div class="build-plot-header">
+            <div class="legend-indicators">
+              <span><span class="legend-dot" style="background: var(--build-red);"></span> y = 0 slice (red)</span>
+              <span><span class="legend-dot" style="background: var(--build-blue);"></span> x = 0 slice (blue)</span>
+              <span><span class="legend-dot" style="background: var(--build-gold);"></span> moving slice (gold)</span>
+              <span><span class="legend-dot" style="background: #ffffff; border: 1px dashed #ffffff;"></span> z-axis</span>
+            </div>
+            <div>
+              <button id="btn-export-build" class="btn-icon" style="background:#232c42; color:#ffffff; border-color:#384566;" title="Download Build Plot as PNG">
+                📷 Export PNG
+              </button>
+            </div>
+          </div>
+          <div id="plot-build" class="build-plot-container"></div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <span>✓</span> <span id="toast-message">Link copied to clipboard!</span>
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    // Verify CDN availability on load
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof math === 'undefined' || typeof Plotly === 'undefined') {
+        const cdnBanner = document.getElementById('cdn-error-banner');
+        if (cdnBanner) cdnBanner.style.display = 'block';
+      }
+    });
+
+    // Preset Examples definition
+    const EXAMPLES = {
+      'bowl': { f: 'x^2 + y^2', xmin: -2, xmax: 2, ymin: -2, ymax: 2 },
+      'elliptic-bowl': { f: 'x^2 + 4*y^2', xmin: -2, xmax: 2, ymin: -2, ymax: 2 },
+      'saddle': { f: 'x^2 - y^2', xmin: -2, xmax: 2, ymin: -2, ymax: 2 },
+      'saddle-xy': { f: 'x*y', xmin: -2, xmax: 2, ymin: -2, ymax: 2 },
+      'plane': { f: '2*x + y', xmin: -2, xmax: 2, ymin: -2, ymax: 2 },
+      'cone': { f: 'sqrt(x^2 + y^2)', xmin: -2, xmax: 2, ymin: -2, ymax: 2 },
+      'parabolic': { f: 'y - x^2', xmin: -2, xmax: 2, ymin: -2, ymax: 2 },
+      'gaussian': { f: 'exp(-(x^2 + y^2))', xmin: -2.5, xmax: 2.5, ymin: -2.5, ymax: 2.5 },
+      'two-hills': { f: 'exp(-((x-1)^2+y^2)) + exp(-((x+1)^2+y^2))', xmin: -3, xmax: 3, ymin: -2.5, ymax: 2.5 },
+      'egg-crate': { f: 'sin(x)*cos(y)', xmin: -6.3, xmax: 6.3, ymin: -6.3, ymax: 6.3 },
+      'ripples': { f: 'sin(sqrt(x^2 + y^2))', xmin: -10, xmax: 10, ymin: -10, ymax: 10 },
+      'peaks-pits': { f: '(x^2 + 3*y^2)*exp(-x^2 - y^2)', xmin: -3, xmax: 3, ymin: -3, ymax: 3 },
+      'diamond': { f: 'abs(x) + abs(y)', xmin: -2, xmax: 2, ymin: -2, ymax: 2 },
+      'monkey-saddle': { f: 'x^3 - 3*x*y^2', xmin: -1.5, xmax: 1.5, ymin: -1.5, ymax: 1.5 }
+    };
+
+    // Shared DOM Elements
+    const funcInput = document.getElementById('func-input');
+    const examplesSelect = document.getElementById('examples-select');
+    const btnPlot = document.getElementById('btn-plot');
+    const errorBanner = document.getElementById('error-banner');
+    const xMinInput = document.getElementById('x-min');
+    const xMaxInput = document.getElementById('x-max');
+    const yMinInput = document.getElementById('y-min');
+    const yMaxInput = document.getElementById('y-max');
+    const tabExplorerBtn = document.getElementById('tab-explorer-btn');
+    const tabBuildBtn = document.getElementById('tab-build-btn');
+    const tabExplorerContent = document.getElementById('tab-explorer-content');
+    const tabBuildContent = document.getElementById('tab-build-content');
+    const btnShare = document.getElementById('btn-share');
+    const btnPresentation = document.getElementById('btn-presentation');
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+
+    // Explorer DOM Elements
+    const numContoursInput = document.getElementById('num-contours');
+    const styleSelect = document.getElementById('contour-style');
+    const colorSelect = document.getElementById('color-scheme');
+    const showPlaneToggle = document.getElementById('show-plane-toggle');
+    const levelSlider = document.getElementById('level-slider');
+    const levelValDisplay = document.getElementById('level-val-display');
+    const sliderMinLabel = document.getElementById('slider-min-label');
+    const sliderMaxLabel = document.getElementById('slider-max-label');
+    const btnStepDown = document.getElementById('btn-step-down');
+    const btnStepUp = document.getElementById('btn-step-up');
+    const btnAnimate = document.getElementById('btn-animate');
+    const showFullStack = document.getElementById('show-full-stack');
+    const fullStackCard = document.getElementById('full-stack-card');
+    const infoCurveFunc = document.getElementById('info-curve-func');
+    const infoCurveC = document.getElementById('info-curve-c');
+    const infoExtrema = document.getElementById('info-extrema');
+    const btnExportSurface = document.getElementById('btn-export-surface');
+    const btnExportContour = document.getElementById('btn-export-contour');
+    const btnExportFullStack = document.getElementById('btn-export-full-stack');
+
+    // Build Step by Step DOM Elements
+    const buildTitleFunc = document.getElementById('build-title-func');
+    const buildClipNote = document.getElementById('build-clip-note');
+    const stepCards = document.querySelectorAll('.step-card-btn');
+    const buildExplanationText = document.getElementById('build-explanation-text');
+    const buildStepControls = document.getElementById('build-step-controls');
+    const btnStepPrev = document.getElementById('btn-step-prev');
+    const btnStepNext = document.getElementById('btn-step-next');
+    const btnExportBuild = document.getElementById('btn-export-build');
+    const step3Subtitle = document.getElementById('step3-subtitle');
+
+    // App State
+    let currentTab = 'explorer'; // 'explorer' | 'build'
+    const GRID_SIZE = 91; // 91x91 grid requirement
+    let currentXArr = [];
+    let currentYArr = [];
+    let currentZGrid = [];
+    let currentZMin = 0;
+    let currentZMax = 1;
+    let currentC = 0.5;
+    let currentCompiled = null;
+    let currentExprString = 'x^2 + y^2';
+    let targetInitialC = null;
+    let updateRafId = null;
+
+    // Explorer animation state
+    let isExplorerAnimating = false;
+    let explorerAnimReqId = null;
+    const ANIMATION_DURATION_MS = 6000; // ~6 seconds sweep
+
+    // Build mode state
+    let currentStep = 1;
+    let isRadialFunction = false;
+    let forceSweep = false;
+    let sweepAxis = 'y'; // 'y' | 'x'
+    let rotationTheta = 0; // 0 to 360 degrees
+    let sweepKVal = 0;
+    let buildLevelC = 0.5;
+    let isBuildAnimating = false;
+    let buildAnimReqId = null;
+    let buildZMinClipped = 0;
+    let buildZMaxClipped = 1;
+
+    // Number formatting helper
+    function formatSigFigs(val, n = 4) {
+      if (val === null || val === undefined || isNaN(val)) return '—';
+      if (!isFinite(val)) return val > 0 ? '+∞' : '-∞';
+      if (val === 0) return '0.000';
+      const abs = Math.abs(val);
+      if (abs >= 0.001 && abs < 100000) {
+        const prec = val.toPrecision(n);
+        if (!prec.includes('e') && !prec.includes('E')) {
+          return prec;
+        }
+      }
+      return val.toPrecision(n);
+    }
+
+    function showError(msg) {
+      errorBanner.textContent = msg;
+      errorBanner.style.display = 'block';
+    }
+
+    function hideError() {
+      errorBanner.textContent = '';
+      errorBanner.style.display = 'none';
+    }
+
+    function showToast(msg) {
+      toastMessage.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2600);
+    }
+
+    // Check if the expression is exactly x^2 + y^2 (ignoring spaces)
+    function isExactParaboloid(expr) {
+      const clean = expr.replace(/\s+/g, '');
+      return clean === 'x^2+y^2' || clean === 'y^2+x^2';
+    }
+
+    // AST Substitution and Simplification using math.js
+    function getSliceFormula(expr, varToReplace, replaceVal) {
+      try {
+        const parsed = math.parse(expr);
+        const substituted = parsed.transform(function (n) {
+          if (n.isSymbolNode && n.name === varToReplace) {
+            return new math.ConstantNode(replaceVal);
+          }
+          return n;
+        });
+        const subStr = substituted.toString({ implicit: 'hide' });
+        let simplifiedStr = subStr;
+        try {
+          simplifiedStr = math.simplify(substituted).toString({ implicit: 'hide' });
+        } catch (e) {
+          simplifiedStr = subStr;
+        }
+        return { subStr, simplifiedStr };
+      } catch (err) {
+        return { subStr: expr, simplifiedStr: expr };
+      }
+    }
+
+    // Check whether f is radial: f depends only on r = sqrt(x^2 + y^2)
+    function checkIfRadial(compiled, xmin, xmax, ymin, ymax) {
+      const R = Math.min(Math.abs(xmin), Math.abs(xmax), Math.abs(ymin), Math.abs(ymax));
+      if (R <= 1e-4) return false;
+
+      const numR = 20;
+      const numAngles = 12;
+      const scope = { x: 0, y: 0, X: 0, Y: 0, pi: Math.PI, PI: Math.PI, e: Math.E, E: Math.E };
+
+      for (let i = 1; i <= numR; i++) {
+        const r = (i / numR) * R;
+        let baseVal = null;
+        let baseValid = false;
+
+        for (let j = 0; j < numAngles; j++) {
+          const theta = (j / numAngles) * 2 * Math.PI;
+          const x = r * Math.cos(theta);
+          const y = r * Math.sin(theta);
+          scope.x = x; scope.y = y;
+          scope.X = x; scope.Y = y;
+
+          let val = null;
+          try {
+            const raw = compiled.evaluate(scope);
+            if (typeof raw === 'number' && isFinite(raw) && !isNaN(raw)) {
+              val = raw;
+            } else if (raw && typeof raw === 'object' && ('re' in raw) && ('im' in raw)) {
+              if (Math.abs(raw.im) < 1e-10 && isFinite(raw.re) && !isNaN(raw.re)) {
+                val = raw.re;
+              }
+            }
+          } catch (e) {
+            val = null;
+          }
+
+          if (val === null) {
+            if (j === 0) {
+              baseValid = false;
+            } else if (baseValid) {
+              return false;
+            }
+          } else {
+            if (j === 0) {
+              baseVal = val;
+              baseValid = true;
+            } else {
+              if (!baseValid) return false;
+              const diff = Math.abs(val - baseVal);
+              const tol = 1e-6 * (Math.abs(baseVal) + 1.0);
+              if (diff > tol) return false;
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    // Compare two slices: f(t, 0) and f(0, t)
+    function compareSlices(compiled, xmin, xmax, ymin, ymax) {
+      const tMin = Math.max(xmin, ymin);
+      const tMax = Math.min(xmax, ymax);
+      if (tMax <= tMin) return false;
+
+      const N = 50;
+      const dt = (tMax - tMin) / (N - 1);
+      const scope = { x: 0, y: 0, X: 0, Y: 0, pi: Math.PI, PI: Math.PI, e: Math.E, E: Math.E };
+
+      for (let i = 0; i < N; i++) {
+        const t = tMin + i * dt;
+        scope.x = t; scope.y = 0;
+        let v1 = null;
+        try {
+          const r1 = compiled.evaluate(scope);
+          if (typeof r1 === 'number' && isFinite(r1) && !isNaN(r1)) v1 = r1;
+        } catch (e) {}
+
+        scope.x = 0; scope.y = t;
+        let v2 = null;
+        try {
+          const r2 = compiled.evaluate(scope);
+          if (typeof r2 === 'number' && isFinite(r2) && !isNaN(r2)) v2 = r2;
+        } catch (e) {}
+
+        if (v1 === null && v2 === null) continue;
+        if (v1 === null || v2 === null) return false;
+        if (Math.abs(v1 - v2) > 1e-9) return false;
+      }
+      return true;
+    }
+
+    // Grid Evaluation with 95th Percentile Singularity Clipping
+    function evaluateFunctionOnGrid(compiled, xmin, xmax, ymin, ymax) {
+      const xArr = new Float64Array(GRID_SIZE);
+      const yArr = new Float64Array(GRID_SIZE);
+      const dx = (xmax - xmin) / (GRID_SIZE - 1);
+      const dy = (ymax - ymin) / (GRID_SIZE - 1);
+
+      for (let i = 0; i < GRID_SIZE; i++) xArr[i] = xmin + i * dx;
+      for (let j = 0; j < GRID_SIZE; j++) yArr[j] = ymin + j * dy;
+
+      const zGrid = new Array(GRID_SIZE);
+      let realCount = 0;
+      const absVals = [];
+
+      const scope = { x: 0, y: 0, X: 0, Y: 0, pi: Math.PI, PI: Math.PI, e: Math.E, E: Math.E };
+
+      for (let j = 0; j < GRID_SIZE; j++) {
+        const row = new Array(GRID_SIZE);
+        const yVal = yArr[j];
+        scope.y = yVal; scope.Y = yVal;
+
+        for (let i = 0; i < GRID_SIZE; i++) {
+          const xVal = xArr[i];
+          scope.x = xVal; scope.X = xVal;
+
+          let val = null;
+          try {
+            const raw = compiled.evaluate(scope);
+            if (typeof raw === 'number') {
+              if (isFinite(raw) && !isNaN(raw)) val = raw;
+            } else if (raw && typeof raw === 'object' && ('re' in raw) && ('im' in raw)) {
+              if (Math.abs(raw.im) < 1e-11 && isFinite(raw.re) && !isNaN(raw.re)) {
+                val = raw.re;
+              }
+            }
+          } catch (e) {
+            val = null;
+          }
+
+          if (val !== null) {
+            absVals.push(Math.abs(val));
+            realCount++;
+          }
+          row[i] = val;
+        }
+        zGrid[j] = row;
+      }
+
+      if (realCount === 0) {
+        return { xArr: Array.from(xArr), yArr: Array.from(yArr), zGrid, zMin: 0, zMax: 1, realCount: 0, wasClipped: false };
+      }
+
+      // 95th Percentile Clipping: if |z| > 10 * P95, clip to null
+      absVals.sort((a, b) => a - b);
+      const p95Index = Math.min(absVals.length - 1, Math.floor(0.95 * absVals.length));
+      const p95 = absVals[p95Index];
+      const clipThreshold = p95 > 0 ? 10 * p95 : Infinity;
+      let wasClipped = false;
+
+      let zMin = Infinity;
+      let zMax = -Infinity;
+
+      for (let j = 0; j < GRID_SIZE; j++) {
+        for (let i = 0; i < GRID_SIZE; i++) {
+          let v = zGrid[j][i];
+          if (v !== null) {
+            if (Math.abs(v) > clipThreshold) {
+              zGrid[j][i] = null;
+              wasClipped = true;
+            } else {
+              if (v < zMin) zMin = v;
+              if (v > zMax) zMax = v;
+            }
+          }
+        }
+      }
+
+      if (!isFinite(zMin) || !isFinite(zMax)) {
+        zMin = 0; zMax = 1;
+      }
+
+      return {
+        xArr: Array.from(xArr),
+        yArr: Array.from(yArr),
+        zGrid,
+        zMin,
+        zMax,
+        realCount,
+        wasClipped,
+        clipThreshold
+      };
+    }
+
+    // Main Compute and Plot Routine (Shared between modes)
+    function recomputeAndPlot(resetCamera = false) {
+      if (typeof math === 'undefined' || typeof Plotly === 'undefined') {
+        showError('Plotting libraries did not load. Check your internet connection.');
+        return;
+      }
+
+      const expr = funcInput.value.trim();
+      if (!expr) {
+        showError('Please enter a function of x and y.');
+        return;
+      }
+
+      const xmin = parseFloat(xMinInput.value);
+      const xmax = parseFloat(xMaxInput.value);
+      const ymin = parseFloat(yMinInput.value);
+      const ymax = parseFloat(yMaxInput.value);
+
+      if (isNaN(xmin) || isNaN(xmax) || isNaN(ymin) || isNaN(ymax)) {
+        showError('All domain range values must be valid numbers.');
+        return;
+      }
+      if (xmax <= xmin) {
+        showError('Invalid range: x max must be strictly greater than x min.');
+        return;
+      }
+      if (ymax <= ymin) {
+        showError('Invalid range: y max must be strictly greater than y min.');
+        return;
+      }
+
+      let compiled;
+      try {
+        compiled = math.compile(expr);
+        compiled.evaluate({ x: 0, y: 0, X: 0, Y: 0, pi: Math.PI, PI: Math.PI, e: Math.E, E: Math.E });
+      } catch (err) {
+        let msg = err.message || 'Unknown parsing error';
+        if (msg.includes('Undefined symbol')) {
+          const match = msg.match(/Undefined symbol\s+([a-zA-Z0-9_]+)/i);
+          const sym = match ? match[1] : '';
+          msg = `Undefined symbol "${sym}". Use only the letters x and y (and constants pi, e).`;
+        } else {
+          msg = `Could not read the function: ${msg}`;
+        }
+        showError(msg);
+        return;
+      }
+
+      const result = evaluateFunctionOnGrid(compiled, xmin, xmax, ymin, ymax);
+      if (result.realCount === 0) {
+        showError('The function gave no real values on this domain. Try adjusting domain ranges or the function.');
+        return;
+      }
+
+      hideError();
+
+      currentCompiled = compiled;
+      currentExprString = expr;
+      currentXArr = result.xArr;
+      currentYArr = result.yArr;
+      currentZGrid = result.zGrid;
+      currentZMin = result.zMin;
+      currentZMax = result.zMax;
+
+      const isConstant = (currentZMin === currentZMax);
+      const effectiveMin = isConstant ? currentZMin - 1 : currentZMin;
+      const effectiveMax = isConstant ? currentZMax + 1 : currentZMax;
+
+      buildZMinClipped = effectiveMin;
+      buildZMaxClipped = effectiveMax;
+
+      // Check radial symmetry
+      isRadialFunction = checkIfRadial(compiled, xmin, xmax, ymin, ymax);
+
+      // Show/hide clipping warning
+      if (result.wasClipped) {
+        buildClipNote.style.display = 'inline-block';
+        buildClipNote.textContent = `⚠️ Extreme values clipped (|z| > ${formatSigFigs(result.clipThreshold, 3)}) for clear display`;
+      } else {
+        buildClipNote.style.display = 'none';
+      }
+
+      // Initialize level c
+      if (targetInitialC !== null && targetInitialC >= effectiveMin && targetInitialC <= effectiveMax) {
+        currentC = targetInitialC;
+        targetInitialC = null;
+      } else {
+        if (effectiveMin <= 0 && effectiveMax >= 0 && !isConstant) {
+          currentC = 0;
+        } else {
+          currentC = (effectiveMin + effectiveMax) / 2;
+        }
+      }
+      buildLevelC = currentC;
+
+      // Configure Explorer Slider
+      levelSlider.min = effectiveMin;
+      levelSlider.max = effectiveMax;
+      const sliderStep = (effectiveMax - effectiveMin) / 400 || 0.01;
+      levelSlider.step = sliderStep;
+      levelSlider.value = currentC;
+
+      sliderMinLabel.textContent = `min: ${formatSigFigs(effectiveMin, 4)}`;
+      sliderMaxLabel.textContent = `max: ${formatSigFigs(effectiveMax, 4)}`;
+      levelValDisplay.textContent = formatSigFigs(currentC, 4);
+
+      // Explorer info cards
+      infoCurveFunc.textContent = currentExprString;
+      infoCurveC.textContent = formatSigFigs(currentC, 4);
+      infoExtrema.textContent = `Min of f on this region ≈ ${formatSigFigs(currentZMin, 4)}, Max ≈ ${formatSigFigs(currentZMax, 4)}`;
+
+      // Update Build Header Title
+      buildTitleFunc.textContent = `z = ${currentExprString}`;
+
+      // Reset build slice variables
+      rotationTheta = 0;
+      sweepKVal = (sweepAxis === 'y') ? ymin : xmin;
+
+      // Render Active Tab
+      if (currentTab === 'explorer') {
+        renderExplorerPlots(true);
+      } else {
+        updateBuildStepUI();
+        renderBuildPlot();
+      }
+    }
+
+    // ========================================================
+    // EXPLORER MODE PLOTTING
+    // ========================================================
+    function getExplorerPlotsDataAndLayout(cVal) {
+      const xmin = parseFloat(xMinInput.value);
+      const xmax = parseFloat(xMaxInput.value);
+      const ymin = parseFloat(yMinInput.value);
+      const ymax = parseFloat(yMaxInput.value);
+      const numContours = Math.max(3, Math.min(40, parseInt(numContoursInput.value) || 12));
+      const style = styleSelect.value;
+      const cmap = colorSelect.value;
+      const showCuttingPlane = showPlaneToggle.checked;
+
+      const isConstant = (currentZMin === currentZMax);
+      const effectiveMin = isConstant ? currentZMin - 1 : currentZMin;
+      const effectiveMax = isConstant ? currentZMax + 1 : currentZMax;
+      const contourStep = (effectiveMax - effectiveMin) / (numContours - 1) || 1;
+
+      // Surface Plot Traces
+      const surfaceTrace = {
+        type: 'surface',
+        x: currentXArr,
+        y: currentYArr,
+        z: currentZGrid,
+        colorscale: cmap,
+        showscale: false,
+        contours: {
+          z: {
+            show: true,
+            usecolormap: false,
+            start: cVal,
+            end: cVal + 1e-5,
+            size: Math.max(effectiveMax - effectiveMin, 1) + 10,
+            color: '#e03131',
+            width: 8,
+            project: { z: true }
+          }
+        },
+        hovertemplate: 'x: %{x:.2f}<br>y: %{y:.2f}<br>z: %{z:.2f}<extra></extra>'
+      };
+
+      const planeTrace = {
+        type: 'surface',
+        x: [xmin, xmax],
+        y: [ymin, ymax],
+        z: [[cVal, cVal], [cVal, cVal]],
+        colorscale: [[0, 'rgba(224, 49, 49, 0.35)'], [1, 'rgba(224, 49, 49, 0.35)']],
+        showscale: false,
+        opacity: 0.35,
+        hoverinfo: 'none',
+        visible: showCuttingPlane,
+        name: `Plane z = ${formatSigFigs(cVal, 4)}`
+      };
+
+      const surfaceLayout = {
+        uirevision: currentExprString,
+        scene: {
+          xaxis: { title: { text: 'x', font: { size: 14 } }, range: [xmin, xmax] },
+          yaxis: { title: { text: 'y', font: { size: 14 } }, range: [ymin, ymax] },
+          zaxis: { title: { text: 'z', font: { size: 14 } }, range: [effectiveMin - 0.05 * Math.abs(effectiveMin || 1), effectiveMax + 0.05 * Math.abs(effectiveMax || 1)] },
+          camera: { eye: { x: 1.5, y: -1.5, z: 1.0 } },
+          aspectratio: { x: 1, y: 1, z: 0.8 }
+        },
+        margin: { l: 10, r: 10, b: 20, t: 30 },
+        paper_bgcolor: 'transparent'
+      };
+
+      // Contour Plot Traces
+      const mainContourTrace = {
+        type: 'contour',
+        x: currentXArr,
+        y: currentYArr,
+        z: currentZGrid,
+        colorscale: cmap,
+        autocontour: false,
+        contours: {
+          start: effectiveMin,
+          end: effectiveMax,
+          size: contourStep,
+          showlabels: true,
+          labelfont: { family: 'sans-serif', size: 10, color: '#333' },
+          coloring: style === 'lines' ? 'none' : 'fill'
+        },
+        line: {
+          smoothing: 0.85,
+          width: style === 'lines' ? 1.6 : 0.8,
+          color: style === 'lines' ? undefined : '#495057'
+        },
+        colorbar: {
+          title: { text: 'z', side: 'top', font: { size: 13, family: 'sans-serif' } },
+          len: 0.95,
+          thickness: 16
+        },
+        hovertemplate: 'x: %{x:.2f}<br>y: %{y:.2f}<br>z: %{z:.2f}<extra></extra>'
+      };
+
+      const highlightContourTrace = {
+        type: 'contour',
+        x: currentXArr,
+        y: currentYArr,
+        z: currentZGrid,
+        showscale: false,
+        autocontour: false,
+        contours: {
+          start: cVal,
+          end: cVal + 1e-5,
+          size: Math.max(effectiveMax - effectiveMin, 1) + 10,
+          coloring: 'none'
+        },
+        line: { color: '#e03131', width: 4 },
+        hoverinfo: 'none'
+      };
+
+      const contourLayout = {
+        uirevision: currentExprString,
+        xaxis: {
+          title: { text: 'x', font: { size: 14 } },
+          range: [xmin, xmax],
+          zeroline: true,
+          zerolinecolor: '#ced4da',
+          gridcolor: '#e9ecef',
+          constrain: 'domain'
+        },
+        yaxis: {
+          title: { text: 'y', font: { size: 14 } },
+          range: [ymin, ymax],
+          scaleanchor: 'x',
+          scaleratio: 1,
+          zeroline: true,
+          zerolinecolor: '#ced4da',
+          gridcolor: '#e9ecef',
+          constrain: 'domain'
+        },
+        margin: { l: 45, r: 20, b: 40, t: 30 },
+        paper_bgcolor: 'transparent'
+      };
+
+      // Full Stack Plot Traces (View 3)
+      const fullStackTrace = {
+        type: 'surface',
+        x: currentXArr,
+        y: currentYArr,
+        z: currentZGrid,
+        colorscale: cmap,
+        showscale: true,
+        colorbar: { title: { text: 'z', side: 'top' }, len: 0.85, thickness: 16 },
+        contours: {
+          z: {
+            show: true,
+            start: effectiveMin,
+            end: effectiveMax,
+            size: contourStep,
+            usecolormap: true,
+            project: { z: true },
+            width: 4
+          }
+        },
+        hovertemplate: 'x: %{x:.2f}<br>y: %{y:.2f}<br>z: %{z:.2f}<extra></extra>'
+      };
+
+      const fullStackLayout = {
+        uirevision: currentExprString,
+        scene: {
+          xaxis: { title: { text: 'x', font: { size: 14 } }, range: [xmin, xmax] },
+          yaxis: { title: { text: 'y', font: { size: 14 } }, range: [ymin, ymax] },
+          zaxis: { title: { text: 'z', font: { size: 14 } }, range: [effectiveMin - 0.05 * Math.abs(effectiveMin || 1), effectiveMax + 0.05 * Math.abs(effectiveMax || 1)] },
+          camera: { eye: { x: 1.5, y: -1.5, z: 1.0 } },
+          aspectratio: { x: 1, y: 1, z: 0.8 }
+        },
+        margin: { l: 10, r: 10, b: 20, t: 30 },
+        paper_bgcolor: 'transparent'
+      };
+
+      return {
+        surfaceData: [surfaceTrace, planeTrace],
+        surfaceLayout,
+        contourData: [mainContourTrace, highlightContourTrace],
+        contourLayout,
+        fullStackData: [fullStackTrace],
+        fullStackLayout
+      };
+    }
+
+    function renderExplorerPlots(fullUpdate = false) {
+      const plots = getExplorerPlotsDataAndLayout(currentC);
+      const config = {
+        responsive: true,
+        displayModeBar: true,
+        displaylogo: false,
+        modeBarButtonsToRemove: ['toImage', 'sendDataToCloud']
+      };
+
+      Plotly.react('plot-surface', plots.surfaceData, plots.surfaceLayout, config);
+      Plotly.react('plot-contour', plots.contourData, plots.contourLayout, config);
+
+      if (showFullStack.checked) {
+        Plotly.react('plot-full-stack', plots.fullStackData, plots.fullStackLayout, config);
+      }
+    }
+
+    function updateLevelC(cVal) {
+      currentC = cVal;
+      buildLevelC = cVal;
+      levelValDisplay.textContent = formatSigFigs(cVal, 4);
+      infoCurveC.textContent = formatSigFigs(cVal, 4);
+
+      if (updateRafId) cancelAnimationFrame(updateRafId);
+      updateRafId = requestAnimationFrame(() => {
+        renderExplorerPlots(false);
+      });
+    }
+
+    function stepLevelC(direction) {
+      const step = parseFloat(levelSlider.step) || 0.01;
+      const min = parseFloat(levelSlider.min);
+      const max = parseFloat(levelSlider.max);
+      let next = currentC + direction * step * 4;
+      next = Math.max(min, Math.min(max, next));
+      levelSlider.value = next;
+      updateLevelC(next);
+    }
+
+    function toggleExplorerAnimation() {
+      if (isExplorerAnimating) {
+        stopExplorerAnimation();
+      } else {
+        startExplorerAnimation();
+      }
+    }
+
+    function startExplorerAnimation() {
+      if (currentZMin === currentZMax) return;
+      isExplorerAnimating = true;
+      btnAnimate.textContent = '⏸ Pause';
+      btnAnimate.classList.add('animating');
+
+      const min = parseFloat(levelSlider.min);
+      const max = parseFloat(levelSlider.max);
+      const range = max - min;
+      if (range <= 0) return;
+
+      let startTimestamp = null;
+      let initialProgress = (currentC - min) / range;
+      if (initialProgress < 0 || initialProgress >= 1) initialProgress = 0;
+
+      function animStep(timestamp) {
+        if (!isExplorerAnimating) return;
+        if (!startTimestamp) startTimestamp = timestamp;
+
+        const elapsed = timestamp - startTimestamp;
+        const progress = (initialProgress + elapsed / ANIMATION_DURATION_MS) % 1.0;
+        const nextC = min + progress * range;
+
+        levelSlider.value = nextC;
+        updateLevelC(nextC);
+
+        explorerAnimReqId = requestAnimationFrame(animStep);
+      }
+
+      explorerAnimReqId = requestAnimationFrame(animStep);
+    }
+
+    function stopExplorerAnimation() {
+      isExplorerAnimating = false;
+      if (explorerAnimReqId) cancelAnimationFrame(explorerAnimReqId);
+      explorerAnimReqId = null;
+      btnAnimate.textContent = '▶ Animate c';
+      btnAnimate.classList.remove('animating');
+    }
+
+    // ========================================================
+    // BUILD STEP BY STEP MODE LOGIC & PLOTTING
+    // ========================================================
+
+    // Switch between steps
+    function goToStep(step) {
+      if (step < 1 || step > 4) return;
+      stopBuildAnimation();
+      currentStep = step;
+
+      stepCards.forEach(card => {
+        const s = parseInt(card.getAttribute('data-step'));
+        card.classList.toggle('active', s === currentStep);
+      });
+
+      btnStepPrev.disabled = (currentStep === 1);
+      btnStepNext.disabled = (currentStep === 4);
+
+      updateBuildStepUI();
+      renderBuildPlot();
+    }
+
+    // Update explanations and step-specific control widgets
+    function updateBuildStepUI() {
+      const isParaboloid = isExactParaboloid(currentExprString);
+      const xmin = parseFloat(xMinInput.value);
+      const xmax = parseFloat(xMaxInput.value);
+      const ymin = parseFloat(yMinInput.value);
+      const ymax = parseFloat(yMaxInput.value);
+
+      // Subtitle for step 3
+      if (isRadialFunction && !forceSweep) {
+        step3Subtitle.textContent = 'Rotate slice about z-axis';
+      } else {
+        step3Subtitle.textContent = 'Sweep slice along axis';
+      }
+
+      // STEP 1
+      if (currentStep === 1) {
+        if (isParaboloid) {
+          buildExplanationText.innerHTML = `<strong>Put y = 0:</strong><br>z = x² + 0² = x².<br>In the xz-plane the surface cuts out the familiar parabola <strong>z = x²</strong>, opening upward with vertex at the origin.`;
+        } else {
+          const sliceInfo = getSliceFormula(currentExprString, 'y', 0);
+          buildExplanationText.innerHTML = `Put y = 0 in z = ${currentExprString}:<br>
+            <span class="math-line">z = ${sliceInfo.subStr} = <strong>${sliceInfo.simplifiedStr}</strong></span>
+            In the xz-plane (the wall y = 0) the surface cuts out the curve <strong>z = ${sliceInfo.simplifiedStr}</strong>.`;
+        }
+        buildStepControls.innerHTML = `
+          <div style="font-size: 0.9rem; color: #495057;">
+            <strong>Step 1 Slice:</strong> Intersecting surface with plane <span style="font-family: var(--font-math); color: var(--build-red); font-weight: bold;">y = 0</span>.
+          </div>
+        `;
+      }
+      // STEP 2
+      else if (currentStep === 2) {
+        const slicesMatch = compareSlices(currentCompiled, xmin, xmax, ymin, ymax);
+        const matchNote = slicesMatch
+          ? `<div style="margin-top: 8px; color: #2b8a3e; font-weight: 600;">✓ Both slices are the same curve, which hints that the surface may look the same in every direction.</div>`
+          : `<div style="margin-top: 8px; color: #c92a2a; font-weight: 600;">✗ The two slices are different, so the surface has a different shape along x than along y.</div>`;
+
+        if (isParaboloid) {
+          buildExplanationText.innerHTML = `<strong>Put x = 0:</strong><br>z = 0² + y² = y².<br>In the yz-plane we get the same parabola. Both slices look identical, a hint that the surface looks the same in every direction.`;
+        } else {
+          const sliceInfo = getSliceFormula(currentExprString, 'x', 0);
+          buildExplanationText.innerHTML = `Put x = 0 in z = ${currentExprString}:<br>
+            <span class="math-line">z = ${sliceInfo.subStr} = <strong>${sliceInfo.simplifiedStr}</strong></span>
+            In the yz-plane (the wall x = 0) the surface cuts out the curve <strong>z = ${sliceInfo.simplifiedStr}</strong>.${matchNote}`;
+        }
+        buildStepControls.innerHTML = `
+          <div style="font-size: 0.88rem; color: #495057;">
+            Red curve: <span style="color: var(--build-red); font-weight: bold;">z = f(x, 0)</span> (faded)<br>
+            Blue curve: <span style="color: var(--build-blue); font-weight: bold;">z = f(0, y)</span>
+          </div>
+        `;
+      }
+      // STEP 3
+      else if (currentStep === 3) {
+        const useSweep = (!isRadialFunction || forceSweep);
+
+        if (!useSweep) {
+          // Radial Rotation
+          if (isParaboloid) {
+            buildExplanationText.innerHTML = `r = √(x² + y²), so z = x² + y² = r².<br>The height depends only on the distance from the axis. Rotate the parabola z = r² about the z-axis to sweep out the surface.`;
+          } else {
+            const radStr = isRadialFunction ? `Take the curve z = f(r, 0) and rotate it about the z-axis: at every angle θ the slice is the same curve. Press ▶ to sweep it round.` : '';
+            buildExplanationText.innerHTML = `Write r = √(x² + y²), the distance from the z-axis.<br>Then z = ${currentExprString} depends only on r, not on the direction. ${radStr}`;
+          }
+
+          buildStepControls.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label for="rotation-slider" style="font-weight: 600; font-size: 0.9rem;">Rotation angle θ:</label>
+              <span id="rotation-val-badge" class="level-badge" style="background:#fef3c7; border-color:#fde68a; color:#b45309; font-size: 1rem;">
+                ${Math.round(rotationTheta)}°
+              </span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="range" id="rotation-slider" class="slider-input slider-input-gold" min="0" max="360" step="2" value="${rotationTheta}">
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="btn-build-anim-play" class="btn btn-build-anim" style="flex: 1;">▶ Play rotation</button>
+              <button id="btn-build-anim-reset" class="btn btn-secondary" style="padding: 6px 12px;">Reset</button>
+            </div>
+            <div style="margin-top: 4px;">
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="check-force-sweep"> Use sweep instead of rotation
+              </label>
+            </div>
+          `;
+
+          const rotSlider = document.getElementById('rotation-slider');
+          rotSlider.addEventListener('input', () => {
+            if (isBuildAnimating) stopBuildAnimation();
+            rotationTheta = parseFloat(rotSlider.value);
+            document.getElementById('rotation-val-badge').textContent = `${Math.round(rotationTheta)}°`;
+            renderBuildPlot();
+          });
+
+          document.getElementById('btn-build-anim-play').addEventListener('click', toggleBuildAnimation);
+          document.getElementById('btn-build-anim-reset').addEventListener('click', () => {
+            stopBuildAnimation();
+            rotationTheta = 0;
+            rotSlider.value = 0;
+            document.getElementById('rotation-val-badge').textContent = '0°';
+            renderBuildPlot();
+          });
+
+          document.getElementById('check-force-sweep').addEventListener('change', (e) => {
+            forceSweep = e.target.checked;
+            updateBuildStepUI();
+            renderBuildPlot();
+          });
+        } else {
+          // Sweep Mode
+          const kMin = (sweepAxis === 'y') ? ymin : xmin;
+          const kMax = (sweepAxis === 'y') ? ymax : xmax;
+          if (sweepKVal < kMin || sweepKVal > kMax) sweepKVal = kMin;
+
+          const axisName = (sweepAxis === 'y') ? 'y' : 'x';
+          const sliceFormula = getSliceFormula(currentExprString, axisName, sweepKVal.toFixed(2));
+
+          buildExplanationText.innerHTML = `Fix ${axisName} = k = ${sweepKVal.toFixed(2)}.<br>
+            Then z = f(${axisName === 'y' ? 'x, ' + sweepKVal.toFixed(2) : sweepKVal.toFixed(2) + ', y'}) is a curve in the plane ${axisName} = ${sweepKVal.toFixed(2)}:
+            <span class="math-line">z = <strong>${sliceFormula.simplifiedStr}</strong></span>
+            As k moves, these curves stack up side by side and build the surface.`;
+
+          buildStepControls.innerHTML = `
+            <div style="display: flex; gap: 10px; font-size: 0.88rem; font-weight: 600;">
+              <label style="cursor: pointer;"><input type="radio" name="sweep-dir" value="y" ${sweepAxis === 'y' ? 'checked' : ''}> Sweep along y</label>
+              <label style="cursor: pointer;"><input type="radio" name="sweep-dir" value="x" ${sweepAxis === 'x' ? 'checked' : ''}> Sweep along x</label>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label for="sweep-slider" style="font-weight: 600; font-size: 0.9rem;">Plane ${axisName} = k:</label>
+              <span id="sweep-val-badge" class="level-badge" style="background:#fef3c7; border-color:#fde68a; color:#b45309; font-size: 1rem;">
+                k = ${sweepKVal.toFixed(2)}
+              </span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="range" id="sweep-slider" class="slider-input slider-input-gold" min="${kMin}" max="${kMax}" step="${(kMax - kMin)/200}" value="${sweepKVal}">
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="btn-build-anim-play" class="btn btn-build-anim" style="flex: 1;">▶ Play sweep</button>
+              <button id="btn-build-anim-reset" class="btn btn-secondary" style="padding: 6px 12px;">Reset</button>
+            </div>
+            ${isRadialFunction ? `
+            <div style="margin-top: 4px;">
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="check-force-sweep" checked> Use sweep instead of rotation
+              </label>
+            </div>` : ''}
+          `;
+
+          document.querySelectorAll('input[name="sweep-dir"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+              stopBuildAnimation();
+              sweepAxis = e.target.value;
+              sweepKVal = (sweepAxis === 'y') ? ymin : xmin;
+              updateBuildStepUI();
+              renderBuildPlot();
+            });
+          });
+
+          const sweepSlider = document.getElementById('sweep-slider');
+          sweepSlider.addEventListener('input', () => {
+            if (isBuildAnimating) stopBuildAnimation();
+            sweepKVal = parseFloat(sweepSlider.value);
+            document.getElementById('sweep-val-badge').textContent = `k = ${sweepKVal.toFixed(2)}`;
+            updateBuildStepUI();
+            renderBuildPlot();
+          });
+
+          document.getElementById('btn-build-anim-play').addEventListener('click', toggleBuildAnimation);
+          document.getElementById('btn-build-anim-reset').addEventListener('click', () => {
+            stopBuildAnimation();
+            sweepKVal = kMin;
+            sweepSlider.value = kMin;
+            document.getElementById('sweep-val-badge').textContent = `k = ${kMin.toFixed(2)}`;
+            updateBuildStepUI();
+            renderBuildPlot();
+          });
+
+          const forceSweepBox = document.getElementById('check-force-sweep');
+          if (forceSweepBox) {
+            forceSweepBox.addEventListener('change', (e) => {
+              forceSweep = e.target.checked;
+              updateBuildStepUI();
+              renderBuildPlot();
+            });
+          }
+        }
+      }
+      // STEP 4
+      else if (currentStep === 4) {
+        let exampleNote = '';
+        const cleanExpr = currentExprString.replace(/\s+/g, '');
+        if (cleanExpr === 'x^2+y^2') {
+          exampleNote = 'This is the paraboloid of revolution. Horizontal slices x² + y² = c are circles of radius √c; vertical slices through the axis are parabolas.';
+        } else if (cleanExpr === 'x^2+4*y^2' || cleanExpr === 'x^2+4y^2') {
+          exampleNote = 'Horizontal slices are ellipses of the form x² + 4y² = c with semi-axes √c and √(c/4).';
+        } else if (cleanExpr === 'x^2-y^2') {
+          exampleNote = 'Horizontal slices are hyperbolas x² - y² = c (collapsing to the two lines y = ±x when c = 0).';
+        } else if (cleanExpr === 'x*y' || cleanExpr === 'xy') {
+          exampleNote = 'Horizontal slices are hyperbolas x*y = c (lines x = 0 and y = 0 when c = 0).';
+        } else if (cleanExpr === '2*x+y' || cleanExpr === '2x+y') {
+          exampleNote = 'Horizontal slices are parallel straight lines 2x + y = c.';
+        } else if (cleanExpr === 'y-x^2') {
+          exampleNote = 'Horizontal slices are upward parabolas y = x² + c shifted along the y-axis.';
+        }
+
+        buildExplanationText.innerHTML = `Cut the surface with a horizontal plane z = c: the points where ${currentExprString} = c form the level curve (contour). Move the slider to see how the level curves change.<br>
+          ${exampleNote ? `<div style="margin-top: 8px; color: #1971c2; font-weight: 500;">${exampleNote}</div>` : ''}`;
+
+        buildStepControls.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="build-c-slider" style="font-weight: 600; font-size: 0.9rem;">Level c slice:</label>
+            <span id="build-c-val-badge" class="level-badge">
+              c = ${formatSigFigs(buildLevelC, 4)}
+            </span>
+          </div>
+          <div>
+            <input type="range" id="build-c-slider" class="slider-input" min="${buildZMinClipped}" max="${buildZMaxClipped}" step="${(buildZMaxClipped - buildZMinClipped)/400}" value="${buildLevelC}">
+          </div>
+          <div class="summary-box">
+            Vertical slices (x = const, y = const) → curves in the walls.<br>
+            Horizontal slices (z = const) → level curves → the contour plot.
+          </div>
+          <button id="btn-see-contour-plot" class="btn btn-primary" style="margin-top: 4px; width: 100%;">
+            See the contour plot →
+          </button>
+        `;
+
+        const bSlider = document.getElementById('build-c-slider');
+        bSlider.addEventListener('input', () => {
+          buildLevelC = parseFloat(bSlider.value);
+          currentC = buildLevelC;
+          document.getElementById('build-c-val-badge').textContent = `c = ${formatSigFigs(buildLevelC, 4)}`;
+          renderBuildPlot();
+        });
+
+        document.getElementById('btn-see-contour-plot').addEventListener('click', () => {
+          currentC = buildLevelC;
+          switchTab('explorer');
+          levelSlider.value = currentC;
+          updateLevelC(currentC);
+        });
+      }
+    }
+
+    // Build Plot Traces and Render
+    function renderBuildPlot() {
+      const xmin = parseFloat(xMinInput.value);
+      const xmax = parseFloat(xMaxInput.value);
+      const ymin = parseFloat(yMinInput.value);
+      const ymax = parseFloat(yMaxInput.value);
+
+      const zMin = buildZMinClipped;
+      const zMax = buildZMaxClipped;
+
+      const traces = [];
+
+      // Base: White dashed z-axis line
+      traces.push({
+        type: 'scatter3d',
+        mode: 'lines',
+        x: [0, 0],
+        y: [0, 0],
+        z: [zMin, zMax],
+        line: { color: '#ffffff', width: 3, dash: 'dash' },
+        hoverinfo: 'none',
+        name: 'z-axis'
+      });
+
+      // Compute Curve z = f(x, 0)
+      const numPts = 160;
+      const xCurveVals = [];
+      const yCurveZeros = [];
+      const zCurveX0Vals = [];
+      const scope = { x: 0, y: 0, X: 0, Y: 0, pi: Math.PI, PI: Math.PI, e: Math.E, E: Math.E };
+
+      for (let i = 0; i < numPts; i++) {
+        const x = xmin + (i / (numPts - 1)) * (xmax - xmin);
+        scope.x = x; scope.y = 0; scope.X = x; scope.Y = 0;
+        let z = null;
+        try {
+          const r = currentCompiled.evaluate(scope);
+          if (typeof r === 'number' && isFinite(r) && !isNaN(r)) {
+            if (r >= zMin - 1e-4 && r <= zMax + 1e-4) z = r;
+          }
+        } catch (e) {}
+        xCurveVals.push(x);
+        yCurveZeros.push(0);
+        zCurveX0Vals.push(z);
+      }
+
+      // Compute Curve z = f(0, y)
+      const yCurveVals = [];
+      const xCurveZeros = [];
+      const zCurveY0Vals = [];
+      for (let j = 0; j < numPts; j++) {
+        const y = ymin + (j / (numPts - 1)) * (ymax - ymin);
+        scope.x = 0; scope.y = y; scope.X = 0; scope.Y = y;
+        let z = null;
+        try {
+          const r = currentCompiled.evaluate(scope);
+          if (typeof r === 'number' && isFinite(r) && !isNaN(r)) {
+            if (r >= zMin - 1e-4 && r <= zMax + 1e-4) z = r;
+          }
+        } catch (e) {}
+        yCurveVals.push(y);
+        xCurveZeros.push(0);
+        zCurveY0Vals.push(z);
+      }
+
+      // ----------------------------------------------------
+      // STEP 1: Put y = 0
+      // ----------------------------------------------------
+      if (currentStep === 1) {
+        // Plane y = 0
+        traces.push({
+          type: 'surface',
+          x: [[xmin, xmax], [xmin, xmax]],
+          y: [[0, 0], [0, 0]],
+          z: [[zMin, zMin], [zMax, zMax]],
+          colorscale: [[0, '#ff6b6b'], [1, '#ff6b6b']],
+          showscale: false,
+          opacity: 0.15,
+          hoverinfo: 'none',
+          name: 'Plane y = 0'
+        });
+
+        // Curve z = f(x, 0)
+        traces.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: xCurveVals,
+          y: yCurveZeros,
+          z: zCurveX0Vals,
+          line: { color: '#ff6b6b', width: 8 },
+          name: 'z = f(x, 0)',
+          hoverinfo: 'x+z'
+        });
+      }
+
+      // ----------------------------------------------------
+      // STEP 2: Put x = 0
+      // ----------------------------------------------------
+      else if (currentStep === 2) {
+        // Plane y = 0 & Faded red curve
+        traces.push({
+          type: 'surface',
+          x: [[xmin, xmax], [xmin, xmax]],
+          y: [[0, 0], [0, 0]],
+          z: [[zMin, zMin], [zMax, zMax]],
+          colorscale: [[0, '#ff6b6b'], [1, '#ff6b6b']],
+          showscale: false,
+          opacity: 0.12,
+          hoverinfo: 'none',
+          name: 'Plane y = 0'
+        });
+
+        traces.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: xCurveVals,
+          y: yCurveZeros,
+          z: zCurveX0Vals,
+          line: { color: 'rgba(255, 107, 107, 0.5)', width: 6 },
+          name: 'z = f(x, 0)',
+          hoverinfo: 'x+z'
+        });
+
+        // Plane x = 0
+        traces.push({
+          type: 'surface',
+          x: [[0, 0], [0, 0]],
+          y: [[ymin, ymax], [ymin, ymax]],
+          z: [[zMin, zMin], [zMax, zMax]],
+          colorscale: [[0, '#4dabf7'], [1, '#4dabf7']],
+          showscale: false,
+          opacity: 0.15,
+          hoverinfo: 'none',
+          name: 'Plane x = 0'
+        });
+
+        // Curve z = f(0, y) in blue
+        traces.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: xCurveZeros,
+          y: yCurveVals,
+          z: zCurveY0Vals,
+          line: { color: '#4dabf7', width: 8 },
+          name: 'z = f(0, y)',
+          hoverinfo: 'y+z'
+        });
+      }
+
+      // ----------------------------------------------------
+      // STEP 3: Build the surface (Rotation or Sweep)
+      // ----------------------------------------------------
+      else if (currentStep === 3) {
+        // Faded red and blue slices (opacity 0.35)
+        traces.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: xCurveVals,
+          y: yCurveZeros,
+          z: zCurveX0Vals,
+          line: { color: 'rgba(255, 107, 107, 0.35)', width: 4 },
+          hoverinfo: 'none',
+          name: 'z = f(x, 0)'
+        });
+        traces.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: xCurveZeros,
+          y: yCurveVals,
+          z: zCurveY0Vals,
+          line: { color: 'rgba(77, 171, 247, 0.35)', width: 4 },
+          hoverinfo: 'none',
+          name: 'z = f(0, y)'
+        });
+
+        const useSweep = (!isRadialFunction || forceSweep);
+
+        if (!useSweep) {
+          // CASE A: RADIAL ROTATION
+          const R = Math.min(Math.abs(xmin), Math.abs(xmax), Math.abs(ymin), Math.abs(ymax));
+          const rad = (rotationTheta * Math.PI) / 180;
+          const cosT = Math.cos(rad);
+          const sinT = Math.sin(rad);
+
+          // Moving Gold Profile at angle theta: r in [-R, R]
+          const numR = 70;
+          const goldX = [];
+          const goldY = [];
+          const goldZ = [];
+
+          for (let i = 0; i < numR; i++) {
+            const rVal = -R + (i / (numR - 1)) * (2 * R);
+            const x = rVal * cosT;
+            const y = rVal * sinT;
+            scope.x = x; scope.y = y; scope.X = x; scope.Y = y;
+            let z = null;
+            try {
+              const res = currentCompiled.evaluate(scope);
+              if (typeof res === 'number' && isFinite(res) && !isNaN(res)) {
+                if (res >= zMin - 1e-4 && res <= zMax + 1e-4) z = res;
+              }
+            } catch (e) {}
+            goldX.push(x);
+            goldY.push(y);
+            goldZ.push(z);
+          }
+
+          // Swept surface from 0 to theta
+          if (rotationTheta > 2) {
+            const numPhi = Math.max(3, Math.round(60 * (rotationTheta / 360)));
+            const sweptX = new Array(numPhi);
+            const sweptY = new Array(numPhi);
+            const sweptZ = new Array(numPhi);
+
+            for (let j = 0; j < numPhi; j++) {
+              const phi = (j / (numPhi - 1)) * rad;
+              const cp = Math.cos(phi);
+              const sp = Math.sin(phi);
+              const rowX = new Array(numR);
+              const rowY = new Array(numR);
+              const rowZ = new Array(numR);
+
+              for (let i = 0; i < numR; i++) {
+                const rVal = -R + (i / (numR - 1)) * (2 * R);
+                const x = rVal * cp;
+                const y = rVal * sp;
+                scope.x = x; scope.y = y; scope.X = x; scope.Y = y;
+                let z = null;
+                try {
+                  const res = currentCompiled.evaluate(scope);
+                  if (typeof res === 'number' && isFinite(res) && !isNaN(res)) {
+                    if (res >= zMin - 1e-4 && res <= zMax + 1e-4) z = res;
+                  }
+                } catch (e) {}
+                rowX[i] = x;
+                rowY[i] = y;
+                rowZ[i] = z;
+              }
+              sweptX[j] = rowX;
+              sweptY[j] = rowY;
+              sweptZ[j] = rowZ;
+            }
+
+            traces.push({
+              type: 'surface',
+              x: sweptX,
+              y: sweptY,
+              z: sweptZ,
+              colorscale: 'Viridis',
+              opacity: 0.75,
+              showscale: false,
+              hoverinfo: 'x+y+z',
+              name: 'Swept surface'
+            });
+          }
+
+          // Dotted gold arc traced by tip at r = R
+          if (rotationTheta > 1) {
+            const arcSteps = Math.max(2, Math.round(40 * (rotationTheta / 360)));
+            const arcX = [];
+            const arcY = [];
+            const arcZ = [];
+            for (let a = 0; a < arcSteps; a++) {
+              const ang = (a / (arcSteps - 1)) * rad;
+              const x = R * Math.cos(ang);
+              const y = R * Math.sin(ang);
+              scope.x = x; scope.y = y; scope.X = x; scope.Y = y;
+              let z = null;
+              try {
+                const res = currentCompiled.evaluate(scope);
+                if (typeof res === 'number' && isFinite(res) && !isNaN(res)) z = res;
+              } catch (e) {}
+              arcX.push(x); arcY.push(y); arcZ.push(z);
+            }
+
+            traces.push({
+              type: 'scatter3d',
+              mode: 'lines',
+              x: arcX, y: arcY, z: arcZ,
+              line: { color: '#ffd43b', width: 4, dash: 'dot' },
+              hoverinfo: 'none',
+              name: 'Tip arc'
+            });
+          }
+
+          // Gold profile line (drawn on top)
+          traces.push({
+            type: 'scatter3d',
+            mode: 'lines',
+            x: goldX, y: goldY, z: goldZ,
+            line: { color: '#ffd43b', width: 8 },
+            name: 'Profile z = g(r)',
+            hoverinfo: 'x+y+z'
+          });
+        } else {
+          // CASE B: SWEEP MODE
+          if (sweepAxis === 'y') {
+            const k = sweepKVal;
+            // Translucent gold vertical plane y = k
+            traces.push({
+              type: 'surface',
+              x: [[xmin, xmax], [xmin, xmax]],
+              y: [[k, k], [k, k]],
+              z: [[zMin, zMin], [zMax, zMax]],
+              colorscale: [[0, '#ffd43b'], [1, '#ffd43b']],
+              showscale: false,
+              opacity: 0.18,
+              hoverinfo: 'none',
+              name: `Plane y = ${k.toFixed(2)}`
+            });
+
+            // Gold curve z = f(x, k)
+            const numK = 100;
+            const sliceX = [];
+            const sliceY = [];
+            const sliceZ = [];
+            for (let i = 0; i < numK; i++) {
+              const x = xmin + (i / (numK - 1)) * (xmax - xmin);
+              scope.x = x; scope.y = k; scope.X = x; scope.Y = k;
+              let z = null;
+              try {
+                const res = currentCompiled.evaluate(scope);
+                if (typeof res === 'number' && isFinite(res) && !isNaN(res)) {
+                  if (res >= zMin - 1e-4 && res <= zMax + 1e-4) z = res;
+                }
+              } catch (e) {}
+              sliceX.push(x);
+              sliceY.push(k);
+              sliceZ.push(z);
+            }
+
+            traces.push({
+              type: 'scatter3d',
+              mode: 'lines',
+              x: sliceX, y: sliceY, z: sliceZ,
+              line: { color: '#ffd43b', width: 10 },
+              name: `z = f(x, ${k.toFixed(2)})`,
+              hoverinfo: 'x+z'
+            });
+
+            // Partially swept surface: y from ymin to k
+            const sweptYRows = [];
+            const sweptZRows = [];
+            for (let j = 0; j < currentYArr.length; j++) {
+              if (currentYArr[j] <= k) {
+                sweptYRows.push(currentYArr[j]);
+                sweptZRows.push(currentZGrid[j]);
+              }
+            }
+            if (sweptYRows.length > 1) {
+              traces.push({
+                type: 'surface',
+                x: currentXArr,
+                y: sweptYRows,
+                z: sweptZRows,
+                colorscale: 'Viridis',
+                opacity: 0.75,
+                showscale: false,
+                hoverinfo: 'x+y+z',
+                name: 'Swept surface'
+              });
+            }
+          } else {
+            // Sweep along x: plane x = k
+            const k = sweepKVal;
+            traces.push({
+              type: 'surface',
+              x: [[k, k], [k, k]],
+              y: [[ymin, ymax], [ymin, ymax]],
+              z: [[zMin, zMin], [zMax, zMax]],
+              colorscale: [[0, '#ffd43b'], [1, '#ffd43b']],
+              showscale: false,
+              opacity: 0.18,
+              hoverinfo: 'none',
+              name: `Plane x = ${k.toFixed(2)}`
+            });
+
+            const numK = 100;
+            const sliceX = [];
+            const sliceY = [];
+            const sliceZ = [];
+            for (let j = 0; j < numK; j++) {
+              const y = ymin + (j / (numK - 1)) * (ymax - ymin);
+              scope.x = k; scope.y = y; scope.X = k; scope.Y = y;
+              let z = null;
+              try {
+                const res = currentCompiled.evaluate(scope);
+                if (typeof res === 'number' && isFinite(res) && !isNaN(res)) {
+                  if (res >= zMin - 1e-4 && res <= zMax + 1e-4) z = res;
+                }
+              } catch (e) {}
+              sliceX.push(k);
+              sliceY.push(y);
+              sliceZ.push(z);
+            }
+
+            traces.push({
+              type: 'scatter3d',
+              mode: 'lines',
+              x: sliceX, y: sliceY, z: sliceZ,
+              line: { color: '#ffd43b', width: 10 },
+              name: `z = f(${k.toFixed(2)}, y)`,
+              hoverinfo: 'y+z'
+            });
+
+            // Partially swept surface: x from xmin to k
+            const sweptXCols = [];
+            const colIndices = [];
+            for (let i = 0; i < currentXArr.length; i++) {
+              if (currentXArr[i] <= k) {
+                sweptXCols.push(currentXArr[i]);
+                colIndices.push(i);
+              }
+            }
+            if (sweptXCols.length > 1) {
+              const sweptZ = new Array(currentYArr.length);
+              for (let j = 0; j < currentYArr.length; j++) {
+                const row = new Array(colIndices.length);
+                for (let c = 0; c < colIndices.length; c++) {
+                  row[c] = currentZGrid[j][colIndices[c]];
+                }
+                sweptZ[j] = row;
+              }
+
+              traces.push({
+                type: 'surface',
+                x: sweptXCols,
+                y: currentYArr,
+                z: sweptZ,
+                colorscale: 'Viridis',
+                opacity: 0.75,
+                showscale: false,
+                hoverinfo: 'x+y+z',
+                name: 'Swept surface'
+              });
+            }
+          }
+        }
+      }
+
+      // ----------------------------------------------------
+      // STEP 4: The full surface & level curves
+      // ----------------------------------------------------
+      else if (currentStep === 4) {
+        // Red and Blue slices on top
+        traces.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: xCurveVals,
+          y: yCurveZeros,
+          z: zCurveX0Vals,
+          line: { color: '#ff6b6b', width: 5 },
+          name: 'z = f(x, 0)',
+          hoverinfo: 'x+z'
+        });
+        traces.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: xCurveZeros,
+          y: yCurveVals,
+          z: zCurveY0Vals,
+          line: { color: '#4dabf7', width: 5 },
+          name: 'z = f(0, y)',
+          hoverinfo: 'y+z'
+        });
+
+        // Full Surface with level curve cut at height c
+        traces.push({
+          type: 'surface',
+          x: currentXArr,
+          y: currentYArr,
+          z: currentZGrid,
+          colorscale: 'Viridis',
+          opacity: 0.85,
+          showscale: false,
+          contours: {
+            z: {
+              show: true,
+              usecolormap: false,
+              start: buildLevelC,
+              end: buildLevelC + 1e-5,
+              size: Math.max(zMax - zMin, 1) + 10,
+              color: '#ffa94d', // bright orange/white
+              width: 7,
+              project: { z: true }
+            }
+          },
+          hoverinfo: 'x+y+z',
+          name: 'Surface'
+        });
+
+        // Translucent white horizontal plane z = c
+        traces.push({
+          type: 'surface',
+          x: [xmin, xmax],
+          y: [ymin, ymax],
+          z: [[buildLevelC, buildLevelC], [buildLevelC, buildLevelC]],
+          colorscale: [[0, '#ffffff'], [1, '#ffffff']],
+          showscale: false,
+          opacity: 0.22,
+          hoverinfo: 'none',
+          name: `Plane z = ${formatSigFigs(buildLevelC, 4)}`
+        });
+      }
+
+      // Dark Theme Layout for Build Mode
+      const buildLayout = {
+        uirevision: currentExprString, // preserves camera orientation across steps & animations
+        scene: {
+          bgcolor: '#171e2e',
+          xaxis: {
+            title: { text: 'x', font: { color: '#ffffff', size: 14 } },
+            tickfont: { color: '#cbd5e1' },
+            gridcolor: '#2c3755',
+            zerolinecolor: '#475569',
+            showbackground: true,
+            backgroundcolor: '#131926',
+            range: [xmin, xmax]
+          },
+          yaxis: {
+            title: { text: 'y', font: { color: '#ffffff', size: 14 } },
+            tickfont: { color: '#cbd5e1' },
+            gridcolor: '#2c3755',
+            zerolinecolor: '#475569',
+            showbackground: true,
+            backgroundcolor: '#131926',
+            range: [ymin, ymax]
+          },
+          zaxis: {
+            title: { text: 'z', font: { color: '#ffffff', size: 14 } },
+            tickfont: { color: '#cbd5e1' },
+            gridcolor: '#2c3755',
+            zerolinecolor: '#475569',
+            showbackground: true,
+            backgroundcolor: '#131926',
+            range: [zMin - 0.04 * Math.abs(zMin || 1), zMax + 0.04 * Math.abs(zMax || 1)]
+          },
+          camera: { eye: { x: 1.6, y: -1.6, z: 1.1 } },
+          aspectratio: { x: 1, y: 1, z: 0.8 }
+        },
+        paper_bgcolor: '#171e2e',
+        margin: { l: 0, r: 0, b: 0, t: 10 }
+      };
+
+      const config = {
+        responsive: true,
+        displayModeBar: true,
+        displaylogo: false,
+        modeBarButtonsToRemove: ['toImage', 'sendDataToCloud']
+      };
+
+      Plotly.react('plot-build', traces, buildLayout, config);
+    }
+
+    // Step 3 Animation Handlers
+    function toggleBuildAnimation() {
+      if (isBuildAnimating) {
+        stopBuildAnimation();
+      } else {
+        startBuildAnimation();
+      }
+    }
+
+    function startBuildAnimation() {
+      const btn = document.getElementById('btn-build-anim-play');
+      isBuildAnimating = true;
+      if (btn) {
+        btn.textContent = '❚❚ Pause';
+        btn.classList.add('animating');
+      }
+
+      const useSweep = (!isRadialFunction || forceSweep);
+      let startTimestamp = null;
+
+      if (!useSweep) {
+        // Rotate 0 to 360 over 6s
+        let initialAngle = rotationTheta;
+        if (initialAngle >= 360) initialAngle = 0;
+
+        function rotateStep(timestamp) {
+          if (!isBuildAnimating) return;
+          if (!startTimestamp) startTimestamp = timestamp;
+
+          const elapsed = timestamp - startTimestamp;
+          const prog = (initialAngle / 360 + elapsed / 6000) % 1.0;
+          rotationTheta = prog * 360;
+
+          const rotSlider = document.getElementById('rotation-slider');
+          const badge = document.getElementById('rotation-val-badge');
+          if (rotSlider) rotSlider.value = rotationTheta;
+          if (badge) badge.textContent = `${Math.round(rotationTheta)}°`;
+
+          renderBuildPlot();
+          buildAnimReqId = requestAnimationFrame(rotateStep);
+        }
+
+        buildAnimReqId = requestAnimationFrame(rotateStep);
+      } else {
+        // Sweep k from min to max over 6s
+        const xmin = parseFloat(xMinInput.value);
+        const xmax = parseFloat(xMaxInput.value);
+        const ymin = parseFloat(yMinInput.value);
+        const ymax = parseFloat(yMaxInput.value);
+        const kMin = (sweepAxis === 'y') ? ymin : xmin;
+        const kMax = (sweepAxis === 'y') ? ymax : xmax;
+        const range = kMax - kMin;
+        if (range <= 0) return;
+
+        let initialProg = (sweepKVal - kMin) / range;
+        if (initialProg < 0 || initialProg >= 1) initialProg = 0;
+
+        function sweepStep(timestamp) {
+          if (!isBuildAnimating) return;
+          if (!startTimestamp) startTimestamp = timestamp;
+
+          const elapsed = timestamp - startTimestamp;
+          const prog = (initialProg + elapsed / 6000) % 1.0;
+          sweepKVal = kMin + prog * range;
+
+          const sweepSlider = document.getElementById('sweep-slider');
+          const badge = document.getElementById('sweep-val-badge');
+          if (sweepSlider) sweepSlider.value = sweepKVal;
+          if (badge) badge.textContent = `k = ${sweepKVal.toFixed(2)}`;
+
+          updateBuildStepUI();
+          renderBuildPlot();
+          buildAnimReqId = requestAnimationFrame(sweepStep);
+        }
+
+        buildAnimReqId = requestAnimationFrame(sweepStep);
+      }
+    }
+
+    function stopBuildAnimation() {
+      isBuildAnimating = false;
+      if (buildAnimReqId) cancelAnimationFrame(buildAnimReqId);
+      buildAnimReqId = null;
+      const btn = document.getElementById('btn-build-anim-play');
+      if (btn) {
+        btn.textContent = (!isRadialFunction || forceSweep) ? '▶ Play sweep' : '▶ Play rotation';
+        btn.classList.remove('animating');
+      }
+    }
+
+    // ========================================================
+    // TAB MANAGEMENT & URL HASH
+    // ========================================================
+    function switchTab(target) {
+      if (target === currentTab) return;
+      stopExplorerAnimation();
+      stopBuildAnimation();
+
+      currentTab = target;
+      if (target === 'explorer') {
+        tabExplorerBtn.classList.add('active');
+        tabBuildBtn.classList.remove('active');
+        tabExplorerContent.style.display = 'block';
+        tabBuildContent.style.display = 'none';
+
+        setTimeout(() => {
+          Plotly.Plots.resize('plot-surface');
+          Plotly.Plots.resize('plot-contour');
+          if (showFullStack.checked) Plotly.Plots.resize('plot-full-stack');
+        }, 80);
+      } else {
+        tabBuildBtn.classList.add('active');
+        tabExplorerBtn.classList.remove('active');
+        tabBuildContent.style.display = 'block';
+        tabExplorerContent.style.display = 'none';
+
+        updateBuildStepUI();
+        renderBuildPlot();
+        setTimeout(() => {
+          Plotly.Plots.resize('plot-build');
+        }, 80);
+      }
+    }
+
+    function getShareHash() {
+      const f = encodeURIComponent(funcInput.value.trim());
+      const x = `${xMinInput.value},${xMaxInput.value}`;
+      const y = `${yMinInput.value},${yMaxInput.value}`;
+      const n = numContoursInput.value;
+      const s = styleSelect.value;
+      const cmap = colorSelect.value;
+      const c = formatSigFigs(currentC, 4);
+      const tab = currentTab;
+      const step = currentStep;
+      return `#f=${f}&x=${x}&y=${y}&n=${n}&s=${s}&cmap=${cmap}&c=${c}&tab=${tab}&step=${step}`;
+    }
+
+    function loadFromHash() {
+      if (!window.location.hash || window.location.hash.length <= 1) return false;
+      try {
+        const hash = window.location.hash.substring(1).replace(/\+/g, '%2B');
+        const params = new URLSearchParams(hash);
+        let changed = false;
+
+        if (params.has('f')) {
+          funcInput.value = decodeURIComponent(params.get('f'));
+          changed = true;
+        }
+        if (params.has('x')) {
+          const parts = params.get('x').split(',');
+          if (parts.length === 2) {
+            xMinInput.value = parts[0];
+            xMaxInput.value = parts[1];
+            changed = true;
+          }
+        }
+        if (params.has('y')) {
+          const parts = params.get('y').split(',');
+          if (parts.length === 2) {
+            yMinInput.value = parts[0];
+            yMaxInput.value = parts[1];
+            changed = true;
+          }
+        }
+        if (params.has('n')) numContoursInput.value = params.get('n');
+        if (params.has('s')) styleSelect.value = params.get('s');
+        if (params.has('cmap')) colorSelect.value = params.get('cmap');
+        if (params.has('c')) {
+          const cParsed = parseFloat(params.get('c'));
+          if (!isNaN(cParsed)) targetInitialC = cParsed;
+        }
+        if (params.has('tab') && params.get('tab') === 'build') {
+          currentTab = 'build';
+        }
+        if (params.has('step')) {
+          const st = parseInt(params.get('step'));
+          if (st >= 1 && st <= 4) currentStep = st;
+        }
+        return changed;
+      } catch (e) {
+        console.error('Failed to parse URL hash', e);
+        return false;
+      }
+    }
+
+    // ========================================================
+    // EVENT LISTENERS SETUP
+    // ========================================================
+    function setupEventListeners() {
+      // Tab switcher
+      tabExplorerBtn.addEventListener('click', () => switchTab('explorer'));
+      tabBuildBtn.addEventListener('click', () => switchTab('build'));
+
+      // Step cards click
+      stepCards.forEach(card => {
+        card.addEventListener('click', () => {
+          const step = parseInt(card.getAttribute('data-step'));
+          goToStep(step);
+        });
+      });
+
+      // Prev & Next Step buttons
+      btnStepPrev.addEventListener('click', () => goToStep(currentStep - 1));
+      btnStepNext.addEventListener('click', () => goToStep(currentStep + 1));
+
+      // Keyboard arrow keys for Step Navigation
+      window.addEventListener('keydown', (e) => {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA')) {
+          return;
+        }
+        if (currentTab === 'build') {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            goToStep(currentStep - 1);
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            goToStep(currentStep + 1);
+          }
+        }
+      });
+
+      // Plot Button
+      btnPlot.addEventListener('click', () => {
+        stopExplorerAnimation();
+        stopBuildAnimation();
+        recomputeAndPlot(true);
+      });
+
+      // Function Input Enter key and hand edit reset
+      funcInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          stopExplorerAnimation();
+          stopBuildAnimation();
+          recomputeAndPlot(true);
+        }
+      });
+
+      funcInput.addEventListener('input', () => {
+        examplesSelect.value = '';
+        hideError();
+      });
+
+      // Examples Dropdown Change
+      examplesSelect.addEventListener('change', () => {
+        const key = examplesSelect.value;
+        if (!key || !EXAMPLES[key]) return;
+        const ex = EXAMPLES[key];
+        funcInput.value = ex.f;
+        xMinInput.value = ex.xmin;
+        xMaxInput.value = ex.xmax;
+        yMinInput.value = ex.ymin;
+        yMaxInput.value = ex.ymax;
+        targetInitialC = null;
+        stopExplorerAnimation();
+        stopBuildAnimation();
+        recomputeAndPlot(true);
+      });
+
+      // Domain inputs change
+      [xMinInput, xMaxInput, yMinInput, yMaxInput].forEach(inp => {
+        inp.addEventListener('input', () => {
+          examplesSelect.value = '';
+        });
+        inp.addEventListener('change', () => {
+          stopExplorerAnimation();
+          stopBuildAnimation();
+          recomputeAndPlot(true);
+        });
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            stopExplorerAnimation();
+            stopBuildAnimation();
+            recomputeAndPlot(true);
+          }
+        });
+      });
+
+      // Secondary controls
+      numContoursInput.addEventListener('change', () => renderExplorerPlots(false));
+      styleSelect.addEventListener('change', () => renderExplorerPlots(false));
+      colorSelect.addEventListener('change', () => renderExplorerPlots(false));
+      showPlaneToggle.addEventListener('change', () => renderExplorerPlots(false));
+
+      // Level Slider Events (Explorer)
+      levelSlider.addEventListener('input', () => {
+        if (isExplorerAnimating) stopExplorerAnimation();
+        updateLevelC(parseFloat(levelSlider.value));
+      });
+
+      btnStepDown.addEventListener('click', () => {
+        if (isExplorerAnimating) stopExplorerAnimation();
+        stepLevelC(-1);
+      });
+
+      btnStepUp.addEventListener('click', () => {
+        if (isExplorerAnimating) stopExplorerAnimation();
+        stepLevelC(1);
+      });
+
+      // Animation
+      btnAnimate.addEventListener('click', toggleExplorerAnimation);
+
+      // Syntax Chips
+      document.querySelectorAll('.syntax-tag').forEach(tag => {
+        tag.addEventListener('click', () => {
+          const insertText = tag.getAttribute('data-insert');
+          const val = funcInput.value;
+          funcInput.value = val ? `${val} + ${insertText}` : insertText;
+          examplesSelect.value = '';
+          funcInput.focus();
+        });
+      });
+
+      // Full Stack View 3 Checkbox Toggle
+      showFullStack.addEventListener('change', () => {
+        if (showFullStack.checked) {
+          fullStackCard.style.display = 'block';
+          renderExplorerPlots(false);
+          setTimeout(() => Plotly.Plots.resize('plot-full-stack'), 60);
+        } else {
+          fullStackCard.style.display = 'none';
+        }
+      });
+
+      // Share Button
+      btnShare.addEventListener('click', () => {
+        const hash = getShareHash();
+        window.location.hash = hash;
+        navigator.clipboard.writeText(window.location.href)
+          .then(() => showToast('Share link copied to clipboard!'))
+          .catch(() => showToast('URL updated in address bar!'));
+      });
+
+      // Presentation Mode Toggle
+      btnPresentation.addEventListener('click', () => {
+        const isPres = document.body.classList.toggle('presentation-mode');
+        btnPresentation.classList.toggle('active', isPres);
+        btnPresentation.innerHTML = isPres ? '🖥️ Normal Mode' : '🖥️ Presentation Mode';
+
+        setTimeout(() => {
+          Plotly.Plots.resize('plot-surface');
+          Plotly.Plots.resize('plot-contour');
+          if (showFullStack.checked) Plotly.Plots.resize('plot-full-stack');
+          Plotly.Plots.resize('plot-build');
+        }, 120);
+      });
+
+      // Export PNG Buttons
+      btnExportSurface.addEventListener('click', () => {
+        Plotly.downloadImage('plot-surface', {
+          format: 'png', width: 1200, height: 900,
+          filename: `surface_${funcInput.value.replace(/[^a-zA-Z0-9]/g, '_')}`
+        });
+      });
+
+      btnExportContour.addEventListener('click', () => {
+        Plotly.downloadImage('plot-contour', {
+          format: 'png', width: 1000, height: 1000,
+          filename: `contour_${funcInput.value.replace(/[^a-zA-Z0-9]/g, '_')}`
+        });
+      });
+
+      btnExportFullStack.addEventListener('click', () => {
+        Plotly.downloadImage('plot-full-stack', {
+          format: 'png', width: 1200, height: 900,
+          filename: `surface_all_contours_${funcInput.value.replace(/[^a-zA-Z0-9]/g, '_')}`
+        });
+      });
+
+      btnExportBuild.addEventListener('click', () => {
+        Plotly.downloadImage('plot-build', {
+          format: 'png', width: 1400, height: 950,
+          filename: `build_step${currentStep}_${funcInput.value.replace(/[^a-zA-Z0-9]/g, '_')}`
+        });
+      });
+
+      // Window resize handler
+      window.addEventListener('resize', () => {
+        if (currentTab === 'explorer') {
+          Plotly.Plots.resize('plot-surface');
+          Plotly.Plots.resize('plot-contour');
+          if (showFullStack.checked) Plotly.Plots.resize('plot-full-stack');
+        } else {
+          Plotly.Plots.resize('plot-build');
+        }
+      });
+    }
+
+    // Initialization on window load
+    window.addEventListener('load', () => {
+      setupEventListeners();
+      loadFromHash();
+      recomputeAndPlot(true);
+      if (currentTab === 'build') {
+        switchTab('build');
+        goToStep(currentStep);
+      }
+    });
+  </script>
+</body>
+</html>
