@@ -8,6 +8,7 @@
   <!-- CDN Dependencies -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <style>
     :root {
@@ -972,6 +973,279 @@
         gap: 14px;
       }
     }
+
+    /* ========================================================
+       INTERACTIVE 3D SURFACE EXPLORER (SECOND DERIVATIVE TEST)
+       ======================================================== */
+    .s3d-header-banner {
+      background: linear-gradient(135deg, #ffffff 0%, #f8f6ff 100%);
+      border: 1px solid var(--border-color);
+      border-left: 5px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .s3d-header-banner h2 {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 4px;
+    }
+    .s3d-header-banner p {
+      font-size: 0.98rem;
+      color: #495057;
+      line-height: 1.5;
+    }
+    .s3d-header-banner .math-inline {
+      font-family: var(--font-math);
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .s3d-layout {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .s3d-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .s3d-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 12px 15px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .s3d-section-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+    }
+
+    .s3d-slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid #f1f3f5;
+    }
+    .s3d-slider-group:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .s3d-slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .s3d-slider-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #212529;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .s3d-slider-label .math-sym {
+      font-family: var(--font-math);
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .s3d-val-pill {
+      font-family: var(--font-math);
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 16px;
+      font-variant-numeric: tabular-nums;
+      min-width: 58px;
+      text-align: center;
+    }
+    .pill-fxx {
+      background: #fff5f5;
+      color: #e03131;
+      border: 1px solid #ffc9c9;
+    }
+    .pill-fyy {
+      background: #e7f5ff;
+      color: #1971c2;
+      border: 1px solid #a5d8ff;
+    }
+    .pill-fxy {
+      background: #fff9db;
+      color: #d97706;
+      border: 1px solid #ffe066;
+    }
+
+    .s3d-slider-blue::-webkit-slider-thumb {
+      background: #1c7ed6 !important;
+      box-shadow: 0 2px 6px rgba(28, 126, 214, 0.4) !important;
+    }
+    .s3d-slider-blue::-moz-range-thumb {
+      background: #1c7ed6 !important;
+      box-shadow: 0 2px 6px rgba(28, 126, 214, 0.4) !important;
+    }
+
+    /* Quick Preset Buttons Grid */
+    .s3d-presets-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .s3d-preset-btn {
+      flex: 1 1 calc(50% - 4px);
+      font-size: 0.86rem;
+      font-weight: 600;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #dee2e6;
+      background: #f8f9fa;
+      color: #212529;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.16s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .s3d-preset-btn:hover {
+      background: var(--primary-light);
+      border-color: var(--border-focus);
+      color: var(--primary);
+    }
+    .s3d-preset-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(103, 65, 217, 0.28);
+    }
+
+    /* Discriminant & Classification Card */
+    .s3d-formula-box {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-family: var(--font-math);
+      font-size: 1.05rem;
+      color: #1a1a2e;
+      line-height: 1.5;
+    }
+
+    .s3d-badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .s3d-class-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.98rem;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 20px;
+      letter-spacing: 0.2px;
+    }
+    .badge-min {
+      background: #ebfbee;
+      color: #2b8a3e;
+      border: 1px solid #b2f2bb;
+    }
+    .badge-max {
+      background: #fff5f5;
+      color: #c92a2a;
+      border: 1px solid #ffc9c9;
+    }
+    .badge-saddle {
+      background: #f3f0ff;
+      color: #5f3dc4;
+      border: 1px solid #d0bfff;
+    }
+    .badge-inconclusive {
+      background: #fff9db;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .s3d-explanation-text {
+      font-size: 0.92rem;
+      color: #343a40;
+      line-height: 1.48;
+      background: #fafbfc;
+      border-left: 4px solid var(--primary);
+      padding: 10px 12px;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .s3d-viewport-wrap {
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #131926;
+      border: 1px solid #232c42;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+      position: relative;
+      min-height: 580px;
+    }
+
+    .s3d-canvas-container {
+      width: 100%;
+      flex: 1;
+      min-height: 520px;
+      position: relative;
+      cursor: grab;
+    }
+    .s3d-canvas-container:active {
+      cursor: grabbing;
+    }
+
+    .s3d-toggles-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 10px 18px;
+      background: #171e2e;
+      border-top: 1px solid #232c42;
+      color: #cbd5e1;
+      font-size: 0.85rem;
+    }
+    .s3d-toggles-bar label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    @media (max-width: 980px) {
+      .s3d-layout {
+        grid-template-columns: 1fr;
+      }
+      .s3d-canvas-container {
+        min-height: 440px;
+        height: 55vh;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1006,10 +1280,13 @@
       <button id="tab-build-btn" class="tab-btn">
         <span>🏗️</span> Build step by step
       </button>
+      <button id="tab-surface3d-btn" class="tab-btn">
+        <span>🧊</span> Interactive 3D Surface Explorer
+      </button>
     </nav>
 
     <!-- Shared Top Control Panel -->
-    <div class="card control-panel">
+    <div id="shared-control-panel" class="card control-panel">
       <!-- Row 1: Function Input, Examples Dropdown, Plot Button -->
       <div class="primary-input-row">
         <span class="math-prefix">z = f(x, y) =</span>
@@ -1323,6 +1600,195 @@
         </main>
       </div>
     </div>
+
+    <!-- ========================================================
+         VIEW 3: INTERACTIVE 3D SURFACE EXPLORER (SECOND DERIVATIVE TEST)
+         ======================================================== -->
+    <div id="tab-surface3d-content" style="display: none;">
+      <!-- Header & Intro Text -->
+      <div class="s3d-header-banner">
+        <h2>Interactive 3D Surface Explorer</h2>
+        <p>
+          Adjust the second derivatives (<span class="math-inline">f<sub>xx</sub></span>, <span class="math-inline">f<sub>yy</sub></span>) and the surface twist (<span class="math-inline">f<sub>xy</sub></span>) below to see how changing curvature and twist transforms a 3D surface between a bowl, a dome, and a saddle:
+        </p>
+      </div>
+
+      <div class="s3d-layout">
+        <!-- Left Controls & Live Discriminant Sidebar -->
+        <aside class="s3d-sidebar">
+          <!-- Parameter Sliders Card -->
+          <div class="s3d-card">
+            <div class="s3d-section-title">Curvature & Twist Parameters</div>
+
+            <!-- f_xx Slider -->
+            <div class="s3d-slider-group">
+              <div class="s3d-slider-header">
+                <label for="s3d-fxx-slider" class="s3d-slider-label">
+                  <span class="math-sym" style="color: #e03131;">f<sub>xx</sub></span> (X-Curvature)
+                </label>
+                <span id="s3d-fxx-val" class="s3d-val-pill pill-fxx">1.0</span>
+              </div>
+              <div class="slider-controls-row">
+                <button type="button" class="btn-step" data-s3d-step="fxx" data-dir="-1" title="Decrease f_xx">−</button>
+                <input type="range" id="s3d-fxx-slider" class="slider-input" min="-2.0" max="2.0" step="0.1" value="1.0">
+                <button type="button" class="btn-step" data-s3d-step="fxx" data-dir="1" title="Increase f_xx">+</button>
+              </div>
+              <div class="slider-limits">
+                <span>−2.0 (curves down)</span>
+                <span>0.0</span>
+                <span>+2.0 (curves up)</span>
+              </div>
+            </div>
+
+            <!-- f_yy Slider -->
+            <div class="s3d-slider-group">
+              <div class="s3d-slider-header">
+                <label for="s3d-fyy-slider" class="s3d-slider-label">
+                  <span class="math-sym" style="color: #1971c2;">f<sub>yy</sub></span> (Y-Curvature)
+                </label>
+                <span id="s3d-fyy-val" class="s3d-val-pill pill-fyy">−1.0</span>
+              </div>
+              <div class="slider-controls-row">
+                <button type="button" class="btn-step" data-s3d-step="fyy" data-dir="-1" title="Decrease f_yy">−</button>
+                <input type="range" id="s3d-fyy-slider" class="slider-input s3d-slider-blue" min="-2.0" max="2.0" step="0.1" value="-1.0">
+                <button type="button" class="btn-step" data-s3d-step="fyy" data-dir="1" title="Increase f_yy">+</button>
+              </div>
+              <div class="slider-limits">
+                <span>−2.0 (curves down)</span>
+                <span>0.0</span>
+                <span>+2.0 (curves up)</span>
+              </div>
+            </div>
+
+            <!-- f_xy Slider -->
+            <div class="s3d-slider-group">
+              <div class="s3d-slider-header">
+                <label for="s3d-fxy-slider" class="s3d-slider-label">
+                  <span class="math-sym" style="color: #d97706;">f<sub>xy</sub></span> (Surface Twist)
+                </label>
+                <span id="s3d-fxy-val" class="s3d-val-pill pill-fxy">0.0</span>
+              </div>
+              <div class="slider-controls-row">
+                <button type="button" class="btn-step" data-s3d-step="fxy" data-dir="-1" title="Decrease f_xy">−</button>
+                <input type="range" id="s3d-fxy-slider" class="slider-input slider-input-gold" min="-2.0" max="2.0" step="0.1" value="0.0">
+                <button type="button" class="btn-step" data-s3d-step="fxy" data-dir="1" title="Increase f_xy">+</button>
+              </div>
+              <div class="slider-limits">
+                <span>−2.0 (diagonal warp)</span>
+                <span>0.0</span>
+                <span>+2.0 (diagonal warp)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Preset Buttons Card -->
+          <div class="s3d-card">
+            <div class="s3d-section-title">Quick Geometry Presets</div>
+            <div class="s3d-presets-grid">
+              <button type="button" class="s3d-preset-btn" data-preset="bowl">
+                <span>🥣</span> Local Minimum (Bowl)
+              </button>
+              <button type="button" class="s3d-preset-btn" data-preset="dome">
+                <span>⛺</span> Local Maximum (Dome)
+              </button>
+              <button type="button" class="s3d-preset-btn" data-preset="saddle">
+                <span>🐎</span> Classic Saddle
+              </button>
+              <button type="button" class="s3d-preset-btn" data-preset="twisted-saddle">
+                <span>🌀</span> Twisted Saddle (Bowl → Saddle)
+              </button>
+              <button type="button" class="s3d-preset-btn" data-preset="trough" style="flex: 1 1 100%;">
+                <span>〰️</span> Inconclusive Trough (D = 0)
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Discriminant & Formula Card -->
+          <div class="s3d-card">
+            <div class="s3d-section-title">Second Derivative Test & Discriminant</div>
+
+            <div class="s3d-formula-box">
+              <div style="font-size: 0.82rem; color: #6c757d; font-family: var(--font-sans); font-weight: 600; margin-bottom: 2px;">
+                Active Quadratic Surface: <span style="font-family: var(--font-math);">z = ½ f<sub>xx</sub>x² + f<sub>xy</sub>xy + ½ f<sub>yy</sub>y²</span>
+              </div>
+              <div id="s3d-live-equation" style="font-weight: 700; color: #1a1a2e; font-size: 1.12rem;">
+                z = 0.50x² − 0.50y²
+              </div>
+            </div>
+
+            <div class="s3d-formula-box">
+              <div style="font-size: 0.82rem; color: #6c757d; font-family: var(--font-sans); font-weight: 600; margin-bottom: 2px;">
+                Discriminant <span style="font-family: var(--font-math);">D = f<sub>xx</sub>f<sub>yy</sub> − (f<sub>xy</sub>)²</span>:
+              </div>
+              <div id="s3d-live-discriminant" style="font-weight: 700; font-size: 1.12rem;">
+                D = (1.0)(−1.0) − (0.0)² = −1.00
+              </div>
+            </div>
+
+            <div class="s3d-badge-row">
+              <span style="font-size: 0.85rem; font-weight: 700; color: #495057;">Classification at (0, 0):</span>
+              <span id="s3d-class-badge" class="s3d-class-badge badge-saddle">Saddle Point</span>
+            </div>
+
+            <div id="s3d-class-explanation" class="s3d-explanation-text">
+              Since D &lt; 0, the surface curves upward along the x-axis and downward along the y-axis, forming a mountain-pass saddle at (0, 0, 0).
+            </div>
+
+            <button type="button" id="btn-s3d-open-in-explorer" class="btn btn-secondary" style="width: 100%; font-size: 0.88rem;">
+              📊 Open this surface in 2D Contour Explorer →
+            </button>
+          </div>
+        </aside>
+
+        <!-- Right Main 3D Three.js Viewport -->
+        <main class="s3d-viewport-wrap">
+          <div class="build-plot-header">
+            <div class="legend-indicators">
+              <span><span class="legend-dot" style="background: #ff6b6b;"></span> x-trace (y = 0, f<sub>xx</sub>)</span>
+              <span><span class="legend-dot" style="background: #4dabf7;"></span> y-trace (x = 0, f<sub>yy</sub>)</span>
+              <span><span class="legend-dot" style="background: #ffd43b;"></span> diagonal (y = ±x, f<sub>xy</sub> twist)</span>
+              <span><span class="legend-dot" style="background: #38d9a9; box-shadow: 0 0 6px #38d9a9;"></span> critical point (0, 0, 0)</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btn-s3d-reset-cam" class="btn-icon" style="background:#232c42; color:#ffffff; border-color:#384566;" title="Reset 3D camera orientation and zoom">
+                🔄 Reset Camera
+              </button>
+              <button type="button" id="btn-s3d-export-png" class="btn-icon" style="background:#232c42; color:#ffffff; border-color:#384566;" title="Download 3D Surface as PNG">
+                📷 Export PNG
+              </button>
+            </div>
+          </div>
+
+          <!-- Three.js WebGL Container -->
+          <div id="s3d-canvas-host" class="s3d-canvas-container"></div>
+
+          <!-- Interactive Layer Toggles Footer -->
+          <div class="s3d-toggles-bar">
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+              <label>
+                <input type="checkbox" id="s3d-toggle-tangent" checked style="accent-color: #38d9a9;">
+                Horizontal Tangent Plane (z = 0)
+              </label>
+              <label>
+                <input type="checkbox" id="s3d-toggle-traces" checked style="accent-color: #ff6b6b;">
+                Principal Axis Traces (f<sub>xx</sub>, f<sub>yy</sub>)
+              </label>
+              <label>
+                <input type="checkbox" id="s3d-toggle-diag" checked style="accent-color: #ffd43b;">
+                Diagonal Twist Slices (y = ±x)
+              </label>
+              <label>
+                <input type="checkbox" id="s3d-toggle-wire" checked style="accent-color: #a5d8ff;">
+                Surface Grid Wireframe
+              </label>
+            </div>
+            <div style="color: #94a3b8; font-size: 0.8rem;">
+              🖱️ Drag to rotate · Scroll to zoom · Right-drag to pan
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
   </div>
 
   <!-- Toast Notification -->
@@ -1369,8 +1835,11 @@
     const yMaxInput = document.getElementById('y-max');
     const tabExplorerBtn = document.getElementById('tab-explorer-btn');
     const tabBuildBtn = document.getElementById('tab-build-btn');
+    const tabSurface3dBtn = document.getElementById('tab-surface3d-btn');
     const tabExplorerContent = document.getElementById('tab-explorer-content');
     const tabBuildContent = document.getElementById('tab-build-content');
+    const tabSurface3dContent = document.getElementById('tab-surface3d-content');
+    const sharedControlPanel = document.getElementById('shared-control-panel');
     const btnShare = document.getElementById('btn-share');
     const btnPresentation = document.getElementById('btn-presentation');
     const toast = document.getElementById('toast');
@@ -2994,36 +3463,641 @@
     }
 
     // ========================================================
+    // INTERACTIVE 3D SURFACE EXPLORER (SECOND DERIVATIVE TEST)
+    // ========================================================
+    const S3D_PRESETS = {
+      'bowl':           { fxx: 1.5,  fyy: 1.5,  fxy: 0.0 },
+      'dome':           { fxx: -1.5, fyy: -1.5, fxy: 0.0 },
+      'saddle':         { fxx: 1.2,  fyy: -1.2, fxy: 0.0 },
+      'twisted-saddle': { fxx: 1.0,  fyy: 1.0,  fxy: 1.6 },
+      'trough':         { fxx: 1.5,  fyy: 0.0,  fxy: 0.0 }
+    };
+
+    const s3dState = {
+      fxx: 1.0,
+      fyy: -1.0,
+      fxy: 0.0,
+      initialized: false,
+      tweenId: null,
+      scene: null,
+      camera: null,
+      renderer: null,
+      surfaceMesh: null,
+      wireMesh: null,
+      tangentPlaneGroup: null,
+      traceXLine: null,
+      traceYLine: null,
+      traceDiag1Line: null,
+      traceDiag2Line: null,
+      critPointGroup: null,
+      orbit: {
+        theta: -0.78,
+        phi: 1.12,
+        radius: 12.2,
+        target: { x: 0, y: 0, z: 0 },
+        isDragging: false,
+        button: 0,
+        lastX: 0,
+        lastY: 0
+      }
+    };
+
+    // Diverging Colormap: Cool Blue/Teal (z < 0) -> Neutral Slate/Pearl (z = 0) -> Warm Amber/Coral (z > 0)
+    function evaluateDivergingColor(zVal) {
+      const maxRange = 2.6;
+      const t = Math.max(-1, Math.min(1, zVal / maxRange)); // -1 to +1
+      let r, g, b;
+      if (t < 0) {
+        const u = -t; // 0 to 1
+        // Lerp from neutral (#e2e8f0) to cool cyan-blue (#1098ad -> #1c7ed6)
+        r = 0.88 * (1 - u) + 0.09 * u;
+        g = 0.91 * (1 - u) + 0.56 * u;
+        b = 0.94 * (1 - u) + 0.88 * u;
+      } else {
+        const u = t; // 0 to 1
+        // Lerp from neutral (#e2e8f0) to warm amber-coral (#f59f00 -> #f03e3e)
+        r = 0.88 * (1 - u) + 0.96 * u;
+        g = 0.91 * (1 - u) + 0.36 * u;
+        b = 0.94 * (1 - u) + 0.18 * u;
+      }
+      return [r, g, b];
+    }
+
+    function computeTaylorZ(x, y, fxx, fyy, fxy) {
+      return 0.5 * fxx * x * x + fxy * x * y + 0.5 * fyy * y * y;
+    }
+
+    // Visual Z-scale so high curvature/twist corners stay well within the 3D coordinate box
+    const S3D_Z_VISUAL_SCALE = 0.52;
+
+    function computeVisualZ(x, y, fxx, fyy, fxy) {
+      return computeTaylorZ(x, y, fxx, fyy, fxy) * S3D_Z_VISUAL_SCALE;
+    }
+
+    // Create crisp 3D text label sprite for axes
+    function makeAxisLabelSprite(text, colorStr = '#f8fafc', fontSize = 44) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 160;
+      canvas.height = 80;
+      const ctx = canvas.getContext('2d');
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      ctx.fillStyle = colorStr;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 80, 40);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(0.75, 0.38, 1);
+      return sprite;
+    }
+
+    function initSurface3DEngine() {
+      if (s3dState.initialized || typeof THREE === 'undefined') return;
+      const host = document.getElementById('s3d-canvas-host');
+      if (!host) return;
+
+      const width = host.clientWidth || 800;
+      const height = host.clientHeight || 540;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x131926);
+
+      // Use Z-up mathematical coordinate convention: X in [-2,2], Y in [-2,2], Z = z(x,y) vertical
+      const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
+      camera.up.set(0, 0, 1);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      host.innerHTML = '';
+      host.appendChild(renderer.domElement);
+
+      // Lighting
+      const ambient = new THREE.AmbientLight(0xffffff, 0.78);
+      scene.add(ambient);
+
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.52);
+      dirLight1.position.set(5, -6, 8);
+      scene.add(dirLight1);
+
+      const dirLight2 = new THREE.DirectionalLight(0x94a3b8, 0.28);
+      dirLight2.position.set(-6, 5, -5);
+      scene.add(dirLight2);
+
+      // 1. Coordinate Axes & Bounding Reference Box (X, Y, Z with ticks)
+      const axesGroup = new THREE.Group();
+      const axisMatX = new THREE.LineBasicMaterial({ color: 0xff8787 });
+      const axisMatY = new THREE.LineBasicMaterial({ color: 0x74c0fc });
+      const axisMatZ = new THREE.LineBasicMaterial({ color: 0xe2e8f0 });
+      const tickMat = new THREE.LineBasicMaterial({ color: 0x475569 });
+
+      const makeLine = (pts, mat) => {
+        const g = new THREE.BufferGeometry().setFromPoints(pts);
+        return new THREE.Line(g, mat);
+      };
+
+      // X, Y, Z main axes through origin
+      axesGroup.add(makeLine([new THREE.Vector3(-2.35, 0, 0), new THREE.Vector3(2.45, 0, 0)], axisMatX));
+      axesGroup.add(makeLine([new THREE.Vector3(0, -2.35, 0), new THREE.Vector3(0, 2.45, 0)], axisMatY));
+      axesGroup.add(makeLine([new THREE.Vector3(0, 0, -2.6), new THREE.Vector3(0, 0, 2.7)], axisMatZ));
+
+      // Axis labels
+      const lblX = makeAxisLabelSprite('x', '#ff8787', 50);
+      lblX.position.set(2.68, 0, 0);
+      axesGroup.add(lblX);
+
+      const lblY = makeAxisLabelSprite('y', '#74c0fc', 50);
+      lblY.position.set(0, 2.68, 0);
+      axesGroup.add(lblY);
+
+      const lblZ = makeAxisLabelSprite('z', '#f8fafc', 50);
+      lblZ.position.set(0, 0, 2.92);
+      axesGroup.add(lblZ);
+
+      // Tick marks & numbers along X, Y, Z at -2, -1, 1, 2
+      [-2, -1, 1, 2].forEach(v => {
+        axesGroup.add(makeLine([new THREE.Vector3(v, -0.08, 0), new THREE.Vector3(v, 0.08, 0)], tickMat));
+        const tx = makeAxisLabelSprite(String(v), '#94a3b8', 32);
+        tx.position.set(v, -0.26, -0.05);
+        tx.scale.set(0.5, 0.25, 1);
+        axesGroup.add(tx);
+
+        axesGroup.add(makeLine([new THREE.Vector3(-0.08, v, 0), new THREE.Vector3(0.08, v, 0)], tickMat));
+        const ty = makeAxisLabelSprite(String(v), '#94a3b8', 32);
+        ty.position.set(-0.26, v, -0.05);
+        ty.scale.set(0.5, 0.25, 1);
+        axesGroup.add(ty);
+
+        axesGroup.add(makeLine([new THREE.Vector3(-0.08, 0, v), new THREE.Vector3(0.08, 0, v)], tickMat));
+        const tz = makeAxisLabelSprite(String(v), '#94a3b8', 32);
+        tz.position.set(-0.24, 0, v);
+        tz.scale.set(0.5, 0.25, 1);
+        axesGroup.add(tz);
+      });
+      scene.add(axesGroup);
+
+      // 2. Horizontal Tangent Plane at z = 0 spanning [-2, 2] x [-2, 2]
+      const tangentGroup = new THREE.Group();
+      const tpGeo = new THREE.PlaneGeometry(4, 4, 8, 8);
+      const tpMat = new THREE.MeshBasicMaterial({
+        color: 0x38d9a9,
+        transparent: true,
+        opacity: 0.13,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      tangentGroup.add(new THREE.Mesh(tpGeo, tpMat));
+
+      const tpGrid = new THREE.GridHelper(4, 8, 0x38d9a9, 0x2c3e55);
+      tpGrid.rotation.x = Math.PI / 2;
+      tpGrid.material.transparent = true;
+      tpGrid.material.opacity = 0.36;
+      tangentGroup.add(tpGrid);
+      scene.add(tangentGroup);
+
+      // 3. High-Resolution 60x60 Surface Mesh + Projected Wireframe Mesh
+      const SEGMENTS = 60;
+      const surfGeo = new THREE.BufferGeometry();
+      const numVerts = (SEGMENTS + 1) * (SEGMENTS + 1);
+      const positions = new Float32Array(numVerts * 3);
+      const colors = new Float32Array(numVerts * 3);
+      const indices = [];
+
+      for (let j = 0; j <= SEGMENTS; j++) {
+        const y = -2 + (j / SEGMENTS) * 4;
+        for (let i = 0; i <= SEGMENTS; i++) {
+          const x = -2 + (i / SEGMENTS) * 4;
+          const idx = (j * (SEGMENTS + 1) + i) * 3;
+          positions[idx] = x;
+          positions[idx + 1] = y;
+          positions[idx + 2] = 0;
+          colors[idx] = 0.85;
+          colors[idx + 1] = 0.88;
+          colors[idx + 2] = 0.92;
+        }
+      }
+
+      for (let j = 0; j < SEGMENTS; j++) {
+        for (let i = 0; i < SEGMENTS; i++) {
+          const a = j * (SEGMENTS + 1) + i;
+          const b = a + 1;
+          const c = (j + 1) * (SEGMENTS + 1) + i;
+          const d = c + 1;
+          indices.push(a, b, d, a, d, c);
+        }
+      }
+
+      surfGeo.setIndex(indices);
+      surfGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      surfGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      surfGeo.computeVertexNormals();
+
+      const surfMat = new THREE.MeshPhongMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide,
+        shininess: 32,
+        specular: 0x222222,
+        transparent: true,
+        opacity: 0.91,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1
+      });
+      const surfaceMesh = new THREE.Mesh(surfGeo, surfMat);
+      scene.add(surfaceMesh);
+
+      const wireMat = new THREE.MeshBasicMaterial({
+        color: 0x0f172a,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.16
+      });
+      const wireMesh = new THREE.Mesh(surfGeo, wireMat);
+      scene.add(wireMesh);
+
+      // 4. Principal Trace Curves (x-trace, y-trace) & Diagonal Twist Traces (y = x, y = -x)
+      const TRACE_PTS = 81;
+      const makeTraceLine = (hexColor) => {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRACE_PTS * 3), 3));
+        const m = new THREE.LineBasicMaterial({ color: hexColor, linewidth: 3 });
+        return new THREE.Line(g, m);
+      };
+
+      const traceXLine = makeTraceLine(0xff6b6b); // Coral-Red for f_xx along y = 0
+      const traceYLine = makeTraceLine(0x4dabf7); // Sky-Blue for f_yy along x = 0
+      const traceDiag1Line = makeTraceLine(0xffd43b); // Gold for y = x
+      const traceDiag2Line = makeTraceLine(0xf59f00); // Amber-Gold for y = -x
+
+      scene.add(traceXLine);
+      scene.add(traceYLine);
+      scene.add(traceDiag1Line);
+      scene.add(traceDiag2Line);
+
+      // 5. Glowing Critical Point Sphere at (0, 0, 0)
+      const critGroup = new THREE.Group();
+      const sphereGeo = new THREE.SphereGeometry(0.085, 24, 24);
+      const sphereMat = new THREE.MeshBasicMaterial({ color: 0x38d9a9 });
+      critGroup.add(new THREE.Mesh(sphereGeo, sphereMat));
+
+      const haloGeo = new THREE.SphereGeometry(0.145, 20, 20);
+      const haloMat = new THREE.MeshBasicMaterial({
+        color: 0x38d9a9,
+        transparent: true,
+        opacity: 0.35
+      });
+      critGroup.add(new THREE.Mesh(haloGeo, haloMat));
+      scene.add(critGroup);
+
+      s3dState.scene = scene;
+      s3dState.camera = camera;
+      s3dState.renderer = renderer;
+      s3dState.surfaceMesh = surfaceMesh;
+      s3dState.wireMesh = wireMesh;
+      s3dState.tangentPlaneGroup = tangentGroup;
+      s3dState.traceXLine = traceXLine;
+      s3dState.traceYLine = traceYLine;
+      s3dState.traceDiag1Line = traceDiag1Line;
+      s3dState.traceDiag2Line = traceDiag2Line;
+      s3dState.critPointGroup = critGroup;
+      s3dState.initialized = true;
+
+      // Setup Pointer / Touch OrbitControls on the canvas
+      setupSurface3DOrbitControls(renderer.domElement);
+      updateSurface3DCamera();
+      updateSurface3DGeometryAndUI();
+    }
+
+    function updateSurface3DCamera() {
+      if (!s3dState.camera) return;
+      const { theta, phi, radius, target } = s3dState.orbit;
+      const sinPhi = Math.sin(phi);
+      const x = target.x + radius * sinPhi * Math.cos(theta);
+      const y = target.y + radius * sinPhi * Math.sin(theta);
+      const z = target.z + radius * Math.cos(phi);
+      s3dState.camera.position.set(x, y, z);
+      s3dState.camera.lookAt(target.x, target.y, target.z);
+    }
+
+    function renderSurface3DFrame() {
+      if (!s3dState.initialized || !s3dState.renderer) return;
+      s3dState.renderer.render(s3dState.scene, s3dState.camera);
+    }
+
+    function setupSurface3DOrbitControls(domElem) {
+      const orb = s3dState.orbit;
+
+      domElem.addEventListener('contextmenu', e => e.preventDefault());
+
+      domElem.addEventListener('pointerdown', e => {
+        orb.isDragging = true;
+        orb.button = e.button;
+        orb.lastX = e.clientX;
+        orb.lastY = e.clientY;
+        domElem.setPointerCapture(e.pointerId);
+      });
+
+      domElem.addEventListener('pointermove', e => {
+        if (!orb.isDragging) return;
+        const dx = e.clientX - orb.lastX;
+        const dy = e.clientY - orb.lastY;
+        orb.lastX = e.clientX;
+        orb.lastY = e.clientY;
+
+        if (orb.button === 2 || e.shiftKey) {
+          // Right-click or Shift+Drag: Pan
+          const panScale = 0.005 * orb.radius;
+          orb.target.x -= dx * panScale * Math.sin(orb.theta);
+          orb.target.y += dx * panScale * Math.cos(orb.theta);
+          orb.target.z += dy * panScale;
+        } else {
+          // Left-click: Orbit rotate
+          orb.theta -= dx * 0.0075;
+          orb.phi = Math.max(0.12, Math.min(Math.PI - 0.12, orb.phi - dy * 0.0075));
+        }
+        updateSurface3DCamera();
+        renderSurface3DFrame();
+      });
+
+      const stopDrag = e => {
+        orb.isDragging = false;
+      };
+      domElem.addEventListener('pointerup', stopDrag);
+      domElem.addEventListener('pointercancel', stopDrag);
+
+      domElem.addEventListener('wheel', e => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY > 0 ? 1.08 : 0.92;
+        orb.radius = Math.max(3.5, Math.min(20.0, orb.radius * zoomFactor));
+        updateSurface3DCamera();
+        renderSurface3DFrame();
+      }, { passive: false });
+    }
+
+    function resetSurface3DCamera() {
+      s3dState.orbit.theta = -0.78;
+      s3dState.orbit.phi = 1.12;
+      s3dState.orbit.radius = 12.2;
+      s3dState.orbit.target = { x: 0, y: 0, z: 0 };
+      updateSurface3DCamera();
+      renderSurface3DFrame();
+    }
+
+    function resizeSurface3D() {
+      if (!s3dState.initialized || !s3dState.renderer || !s3dState.camera) return;
+      const host = document.getElementById('s3d-canvas-host');
+      if (!host) return;
+      const w = host.clientWidth;
+      const h = host.clientHeight;
+      if (w <= 0 || h <= 0) return;
+      s3dState.camera.aspect = w / h;
+      s3dState.camera.updateProjectionMatrix();
+      s3dState.renderer.setSize(w, h);
+      renderSurface3DFrame();
+    }
+
+    function formatSignedTerm(coeff, varPart, isFirst = false) {
+      const absC = Math.abs(coeff).toFixed(2);
+      if (isFirst) {
+        return `${coeff < -1e-4 ? '−' : ''}${absC}${varPart}`;
+      }
+      const sign = coeff < -1e-4 ? ' − ' : ' + ';
+      return `${sign}${absC}${varPart}`;
+    }
+
+    function updateSurface3DGeometryAndUI() {
+      const { fxx, fyy, fxy } = s3dState;
+
+      // 1. Update slider readouts & positions
+      const fxxSlider = document.getElementById('s3d-fxx-slider');
+      const fyySlider = document.getElementById('s3d-fyy-slider');
+      const fxySlider = document.getElementById('s3d-fxy-slider');
+      if (fxxSlider) fxxSlider.value = fxx;
+      if (fyySlider) fyySlider.value = fyy;
+      if (fxySlider) fxySlider.value = fxy;
+
+      const fxxValEl = document.getElementById('s3d-fxx-val');
+      const fyyValEl = document.getElementById('s3d-fyy-val');
+      const fxyValEl = document.getElementById('s3d-fxy-val');
+      if (fxxValEl) fxxValEl.textContent = (fxx >= 0 ? '+' : '−') + Math.abs(fxx).toFixed(1);
+      if (fyyValEl) fyyValEl.textContent = (fyy >= 0 ? '+' : '−') + Math.abs(fyy).toFixed(1);
+      if (fxyValEl) fxyValEl.textContent = (fxy >= 0 ? '+' : '−') + Math.abs(fxy).toFixed(1);
+
+      // 2. Compute Discriminant D = f_xx * f_yy - (f_xy)^2
+      const D = fxx * fyy - fxy * fxy;
+      const EPS = 0.01;
+
+      let classification = '';
+      let badgeClass = '';
+      let explanation = '';
+
+      if (Math.abs(D) < EPS) {
+        classification = 'Inconclusive (D = 0)';
+        badgeClass = 's3d-class-badge badge-inconclusive';
+        if (Math.abs(fxx) < EPS && Math.abs(fyy) < EPS && Math.abs(fxy) < EPS) {
+          explanation = 'Since D = 0 and all second derivatives vanish, the second-order surface is completely flat; higher-order terms determine the critical point.';
+        } else {
+          explanation = 'Since D = 0, the surface degenerates into a parabolic trough (cylinder) with zero curvature along one principal direction.';
+        }
+      } else if (D > 0 && fxx > 0) {
+        classification = 'Local Minimum (Bowl)';
+        badgeClass = 's3d-class-badge badge-min';
+        explanation = 'Since D > 0 and f_xx > 0, positive axis curvatures dominate the twist, curving the surface upward in every direction from (0, 0, 0).';
+      } else if (D > 0 && fxx < 0) {
+        classification = 'Local Maximum (Dome)';
+        badgeClass = 's3d-class-badge badge-max';
+        explanation = 'Since D > 0 and f_xx < 0, negative axis curvatures dominate the twist, curving the surface downward in every direction from (0, 0, 0).';
+      } else {
+        classification = 'Saddle Point';
+        badgeClass = 's3d-class-badge badge-saddle';
+        if (fxx > 0 && fyy > 0) {
+          explanation = 'Even though f_xx > 0 and f_yy > 0 curve upward along the axes, strong twist |f_xy| makes D < 0 and pulls the diagonal slice downward into a saddle!';
+        } else if (fxx < 0 && fyy < 0) {
+          explanation = 'Even though f_xx < 0 and f_yy < 0 curve downward along the axes, strong twist |f_xy| makes D < 0 and bends the diagonal upward into a saddle!';
+        } else {
+          explanation = 'Since D < 0, the surface bends upward in one principal direction and downward in the other, forming a mountain-pass saddle at (0, 0, 0).';
+        }
+      }
+
+      // 3. Update Formula & Discriminant DOM cards
+      const eqEl = document.getElementById('s3d-live-equation');
+      if (eqEl) {
+        const a = 0.5 * fxx;
+        const b = fxy;
+        const c = 0.5 * fyy;
+        eqEl.textContent = `z = ${formatSignedTerm(a, 'x²', true)}${formatSignedTerm(b, 'xy')}${formatSignedTerm(c, 'y²')}`;
+      }
+
+      const discEl = document.getElementById('s3d-live-discriminant');
+      if (discEl) {
+        const fxxStr = fxx < 0 ? `(${fxx.toFixed(1)})` : `(${fxx.toFixed(1)})`;
+        const fyyStr = fyy < 0 ? `(${fyy.toFixed(1)})` : `(${fyy.toFixed(1)})`;
+        const fxyStr = `(${fxy.toFixed(1)})²`;
+        const signCmp = Math.abs(D) < EPS ? '≈ 0' : (D > 0 ? '> 0' : '< 0');
+        discEl.textContent = `D = ${fxxStr}${fyyStr} − ${fxyStr} = ${D.toFixed(2)} ${signCmp}`;
+      }
+
+      const badgeEl = document.getElementById('s3d-class-badge');
+      if (badgeEl) {
+        badgeEl.className = badgeClass;
+        badgeEl.textContent = classification;
+      }
+
+      const expEl = document.getElementById('s3d-class-explanation');
+      if (expEl) {
+        expEl.textContent = explanation;
+      }
+
+      // Highlight matching preset button if exact match
+      document.querySelectorAll('.s3d-preset-btn').forEach(btn => {
+        const key = btn.getAttribute('data-preset');
+        const p = S3D_PRESETS[key];
+        const isMatch = p && Math.abs(p.fxx - fxx) < 0.04 && Math.abs(p.fyy - fyy) < 0.04 && Math.abs(p.fxy - fxy) < 0.04;
+        btn.classList.toggle('active', !!isMatch);
+      });
+
+      // 4. Update 3D Three.js Buffers in-place (60 FPS)
+      if (!s3dState.initialized || !s3dState.surfaceMesh) return;
+
+      const SEGMENTS = 60;
+      const geo = s3dState.surfaceMesh.geometry;
+      const posAttr = geo.attributes.position;
+      const colAttr = geo.attributes.color;
+      const posArr = posAttr.array;
+      const colArr = colAttr.array;
+
+      for (let j = 0; j <= SEGMENTS; j++) {
+        const y = -2 + (j / SEGMENTS) * 4;
+        for (let i = 0; i <= SEGMENTS; i++) {
+          const x = -2 + (i / SEGMENTS) * 4;
+          const trueZ = computeTaylorZ(x, y, fxx, fyy, fxy);
+          const visZ = trueZ * S3D_Z_VISUAL_SCALE;
+          const idx = (j * (SEGMENTS + 1) + i) * 3;
+          posArr[idx + 2] = visZ;
+
+          const [r, g, b] = evaluateDivergingColor(trueZ);
+          colArr[idx] = r;
+          colArr[idx + 1] = g;
+          colArr[idx + 2] = b;
+        }
+      }
+      posAttr.needsUpdate = true;
+      colAttr.needsUpdate = true;
+      geo.computeVertexNormals();
+
+      // Update Principal & Diagonal Trace Curves
+      const TRACE_PTS = 81;
+      const txArr = s3dState.traceXLine.geometry.attributes.position.array;
+      const tyArr = s3dState.traceYLine.geometry.attributes.position.array;
+      const td1Arr = s3dState.traceDiag1Line.geometry.attributes.position.array;
+      const td2Arr = s3dState.traceDiag2Line.geometry.attributes.position.array;
+
+      for (let k = 0; k < TRACE_PTS; k++) {
+        const t = -2 + (k / (TRACE_PTS - 1)) * 4;
+        const idx = k * 3;
+
+        // x-axis slice (y = 0)
+        txArr[idx] = t;
+        txArr[idx + 1] = 0;
+        txArr[idx + 2] = computeVisualZ(t, 0, fxx, fyy, fxy) + 0.015;
+
+        // y-axis slice (x = 0)
+        tyArr[idx] = 0;
+        tyArr[idx + 1] = t;
+        tyArr[idx + 2] = computeVisualZ(0, t, fxx, fyy, fxy) + 0.015;
+
+        // diagonal slice y = x (clamped to [-1.7, 1.7] so it fits domain cleanly)
+        const td = t * 0.85;
+        td1Arr[idx] = td;
+        td1Arr[idx + 1] = td;
+        td1Arr[idx + 2] = computeVisualZ(td, td, fxx, fyy, fxy) + 0.018;
+
+        // anti-diagonal slice y = -x
+        td2Arr[idx] = td;
+        td2Arr[idx + 1] = -td;
+        td2Arr[idx + 2] = computeVisualZ(td, -td, fxx, fyy, fxy) + 0.018;
+      }
+
+      s3dState.traceXLine.geometry.attributes.position.needsUpdate = true;
+      s3dState.traceYLine.geometry.attributes.position.needsUpdate = true;
+      s3dState.traceDiag1Line.geometry.attributes.position.needsUpdate = true;
+      s3dState.traceDiag2Line.geometry.attributes.position.needsUpdate = true;
+
+      renderSurface3DFrame();
+    }
+
+    // Smooth Tweened Transition to Preset
+    function tweenToSurface3DPreset(targetFxx, targetFyy, targetFxy) {
+      if (s3dState.tweenId) cancelAnimationFrame(s3dState.tweenId);
+      const startFxx = s3dState.fxx;
+      const startFyy = s3dState.fyy;
+      const startFxy = s3dState.fxy;
+      const duration = 420; // ms
+      let startTime = null;
+
+      function stepTween(now) {
+        if (!startTime) startTime = now;
+        const t = Math.min(1, (now - startTime) / duration);
+        // Cubic ease-out
+        const ease = 1 - Math.pow(1 - t, 3);
+
+        s3dState.fxx = Number((startFxx + (targetFxx - startFxx) * ease).toFixed(2));
+        s3dState.fyy = Number((startFyy + (targetFyy - startFyy) * ease).toFixed(2));
+        s3dState.fxy = Number((startFxy + (targetFxy - startFxy) * ease).toFixed(2));
+        updateSurface3DGeometryAndUI();
+
+        if (t < 1) {
+          s3dState.tweenId = requestAnimationFrame(stepTween);
+        } else {
+          s3dState.fxx = targetFxx;
+          s3dState.fyy = targetFyy;
+          s3dState.fxy = targetFxy;
+          s3dState.tweenId = null;
+          updateSurface3DGeometryAndUI();
+        }
+      }
+
+      s3dState.tweenId = requestAnimationFrame(stepTween);
+    }
+
+    // ========================================================
     // TAB MANAGEMENT & URL HASH
     // ========================================================
     function switchTab(target) {
-      if (target === currentTab) return;
+      if (target === currentTab && target !== 'surface3d') return;
       stopExplorerAnimation();
       stopBuildAnimation();
 
       currentTab = target;
-      if (target === 'explorer') {
-        tabExplorerBtn.classList.add('active');
-        tabBuildBtn.classList.remove('active');
-        tabExplorerContent.style.display = 'block';
-        tabBuildContent.style.display = 'none';
+      tabExplorerBtn.classList.toggle('active', target === 'explorer');
+      tabBuildBtn.classList.toggle('active', target === 'build');
+      if (tabSurface3dBtn) tabSurface3dBtn.classList.toggle('active', target === 'surface3d');
 
+      tabExplorerContent.style.display = (target === 'explorer') ? 'block' : 'none';
+      tabBuildContent.style.display = (target === 'build') ? 'block' : 'none';
+      if (tabSurface3dContent) tabSurface3dContent.style.display = (target === 'surface3d') ? 'block' : 'none';
+      if (sharedControlPanel) sharedControlPanel.style.display = (target === 'surface3d') ? 'none' : 'flex';
+
+      if (target === 'explorer') {
         setTimeout(() => {
           Plotly.Plots.resize('plot-surface');
           Plotly.Plots.resize('plot-contour');
           if (showFullStack.checked) Plotly.Plots.resize('plot-full-stack');
         }, 80);
-      } else {
-        tabBuildBtn.classList.add('active');
-        tabExplorerBtn.classList.remove('active');
-        tabBuildContent.style.display = 'block';
-        tabExplorerContent.style.display = 'none';
-
+      } else if (target === 'build') {
         updateBuildStepUI();
         renderBuildPlot();
         setTimeout(() => {
           Plotly.Plots.resize('plot-build');
         }, 80);
+      } else if (target === 'surface3d') {
+        setTimeout(() => {
+          initSurface3DEngine();
+          resizeSurface3D();
+          updateSurface3DGeometryAndUI();
+        }, 40);
       }
     }
 
@@ -3037,7 +4111,10 @@
       const c = formatSigFigs(currentC, 4);
       const tab = currentTab;
       const step = currentStep;
-      return `#f=${f}&x=${x}&y=${y}&n=${n}&s=${s}&cmap=${cmap}&c=${c}&tab=${tab}&step=${step}`;
+      const fxx = s3dState.fxx.toFixed(1);
+      const fyy = s3dState.fyy.toFixed(1);
+      const fxy = s3dState.fxy.toFixed(1);
+      return `#f=${f}&x=${x}&y=${y}&n=${n}&s=${s}&cmap=${cmap}&c=${c}&tab=${tab}&step=${step}&fxx=${fxx}&fyy=${fyy}&fxy=${fxy}`;
     }
 
     function loadFromHash() {
@@ -3074,8 +4151,22 @@
           const cParsed = parseFloat(params.get('c'));
           if (!isNaN(cParsed)) targetInitialC = cParsed;
         }
-        if (params.has('tab') && params.get('tab') === 'build') {
-          currentTab = 'build';
+        if (params.has('fxx')) {
+          const v = parseFloat(params.get('fxx'));
+          if (!isNaN(v)) s3dState.fxx = Math.max(-2, Math.min(2, v));
+        }
+        if (params.has('fyy')) {
+          const v = parseFloat(params.get('fyy'));
+          if (!isNaN(v)) s3dState.fyy = Math.max(-2, Math.min(2, v));
+        }
+        if (params.has('fxy')) {
+          const v = parseFloat(params.get('fxy'));
+          if (!isNaN(v)) s3dState.fxy = Math.max(-2, Math.min(2, v));
+        }
+        if (params.has('tab')) {
+          const t = params.get('tab');
+          if (t === 'build') currentTab = 'build';
+          else if (t === 'surface3d' || t === '3d') currentTab = 'surface3d';
         }
         if (params.has('step')) {
           const st = parseInt(params.get('step'));
@@ -3095,6 +4186,132 @@
       // Tab switcher
       tabExplorerBtn.addEventListener('click', () => switchTab('explorer'));
       tabBuildBtn.addEventListener('click', () => switchTab('build'));
+      if (tabSurface3dBtn) {
+        tabSurface3dBtn.addEventListener('click', () => switchTab('surface3d'));
+      }
+
+      // Interactive 3D Surface Explorer Controls
+      const fxxSlider = document.getElementById('s3d-fxx-slider');
+      const fyySlider = document.getElementById('s3d-fyy-slider');
+      const fxySlider = document.getElementById('s3d-fxy-slider');
+
+      if (fxxSlider) {
+        fxxSlider.addEventListener('input', () => {
+          if (s3dState.tweenId) cancelAnimationFrame(s3dState.tweenId);
+          s3dState.fxx = parseFloat(fxxSlider.value);
+          updateSurface3DGeometryAndUI();
+        });
+      }
+      if (fyySlider) {
+        fyySlider.addEventListener('input', () => {
+          if (s3dState.tweenId) cancelAnimationFrame(s3dState.tweenId);
+          s3dState.fyy = parseFloat(fyySlider.value);
+          updateSurface3DGeometryAndUI();
+        });
+      }
+      if (fxySlider) {
+        fxySlider.addEventListener('input', () => {
+          if (s3dState.tweenId) cancelAnimationFrame(s3dState.tweenId);
+          s3dState.fxy = parseFloat(fxySlider.value);
+          updateSurface3DGeometryAndUI();
+        });
+      }
+
+      // Step buttons (- / +) for f_xx, f_yy, f_xy
+      document.querySelectorAll('[data-s3d-step]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (s3dState.tweenId) cancelAnimationFrame(s3dState.tweenId);
+          const key = btn.getAttribute('data-s3d-step');
+          const dir = parseInt(btn.getAttribute('data-dir'), 10);
+          s3dState[key] = Math.max(-2.0, Math.min(2.0, Number((s3dState[key] + dir * 0.1).toFixed(1))));
+          updateSurface3DGeometryAndUI();
+        });
+      });
+
+      // Preset buttons with smooth tweened transitions
+      document.querySelectorAll('.s3d-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-preset');
+          const p = S3D_PRESETS[key];
+          if (p) {
+            tweenToSurface3DPreset(p.fxx, p.fyy, p.fxy);
+          }
+        });
+      });
+
+      // Layer Toggles
+      const toggleTangent = document.getElementById('s3d-toggle-tangent');
+      const toggleTraces = document.getElementById('s3d-toggle-traces');
+      const toggleDiag = document.getElementById('s3d-toggle-diag');
+      const toggleWire = document.getElementById('s3d-toggle-wire');
+
+      if (toggleTangent) {
+        toggleTangent.addEventListener('change', () => {
+          if (s3dState.tangentPlaneGroup) s3dState.tangentPlaneGroup.visible = toggleTangent.checked;
+          renderSurface3DFrame();
+        });
+      }
+      if (toggleTraces) {
+        toggleTraces.addEventListener('change', () => {
+          if (s3dState.traceXLine) s3dState.traceXLine.visible = toggleTraces.checked;
+          if (s3dState.traceYLine) s3dState.traceYLine.visible = toggleTraces.checked;
+          renderSurface3DFrame();
+        });
+      }
+      if (toggleDiag) {
+        toggleDiag.addEventListener('change', () => {
+          if (s3dState.traceDiag1Line) s3dState.traceDiag1Line.visible = toggleDiag.checked;
+          if (s3dState.traceDiag2Line) s3dState.traceDiag2Line.visible = toggleDiag.checked;
+          renderSurface3DFrame();
+        });
+      }
+      if (toggleWire) {
+        toggleWire.addEventListener('change', () => {
+          if (s3dState.wireMesh) s3dState.wireMesh.visible = toggleWire.checked;
+          renderSurface3DFrame();
+        });
+      }
+
+      // Reset Camera & Export PNG for 3D Surface Explorer
+      const btnResetCam = document.getElementById('btn-s3d-reset-cam');
+      if (btnResetCam) {
+        btnResetCam.addEventListener('click', resetSurface3DCamera);
+      }
+
+      const btnExportS3d = document.getElementById('btn-s3d-export-png');
+      if (btnExportS3d) {
+        btnExportS3d.addEventListener('click', () => {
+          if (!s3dState.renderer) return;
+          renderSurface3DFrame();
+          const dataUrl = s3dState.renderer.domElement.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.download = `3d_surface_fxx${s3dState.fxx}_fyy${s3dState.fyy}_fxy${s3dState.fxy}.png`;
+          link.href = dataUrl;
+          link.click();
+        });
+      }
+
+      // Send current quadratic Taylor surface into Main 2D Contour Explorer
+      const btnOpenInExplorer = document.getElementById('btn-s3d-open-in-explorer');
+      if (btnOpenInExplorer) {
+        btnOpenInExplorer.addEventListener('click', () => {
+          const a = Number((0.5 * s3dState.fxx).toFixed(2));
+          const b = Number(s3dState.fxy.toFixed(2));
+          const c = Number((0.5 * s3dState.fyy).toFixed(2));
+          const terms = [];
+          if (Math.abs(a) > 1e-4) terms.push(`${a}*x^2`);
+          if (Math.abs(b) > 1e-4) terms.push(`${b >= 0 && terms.length ? '+ ' + b : b}*x*y`);
+          if (Math.abs(c) > 1e-4) terms.push(`${c >= 0 && terms.length ? '+ ' + c : c}*y^2`);
+          funcInput.value = terms.length ? terms.join(' ').replace(/\+\s*-/g, '- ') : '0';
+          xMinInput.value = -2;
+          xMaxInput.value = 2;
+          yMinInput.value = -2;
+          yMaxInput.value = 2;
+          examplesSelect.value = '';
+          switchTab('explorer');
+          recomputeAndPlot(true);
+        });
+      }
 
       // Step cards click
       stepCards.forEach(card => {
@@ -3286,8 +4503,10 @@
           Plotly.Plots.resize('plot-surface');
           Plotly.Plots.resize('plot-contour');
           if (showFullStack.checked) Plotly.Plots.resize('plot-full-stack');
-        } else {
+        } else if (currentTab === 'build') {
           Plotly.Plots.resize('plot-build');
+        } else if (currentTab === 'surface3d') {
+          resizeSurface3D();
         }
       });
     }
@@ -3300,6 +4519,8 @@
       if (currentTab === 'build') {
         switchTab('build');
         goToStep(currentStep);
+      } else if (currentTab === 'surface3d') {
+        switchTab('surface3d');
       }
     });
   </script>
